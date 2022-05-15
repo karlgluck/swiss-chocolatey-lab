@@ -74,14 +74,12 @@ function Update-SwissHost {
 
 
 
-  # Now that we have the config, define the rest of the local variables
+  # Now that we have the config, define derived variables
   $GenericConfigUrl = "$($Config.RawUrl)/Config/.swisshost"
   $HostSpecificConfigUrl = "$($Config.RawUrl)/Config/${env:ComputerName}.swisshost"
   $Headers = @{Authorization=@('token ',$Config.Token) -join ''; 'Cache-Control'='no-cache'}
   $TempRepositoryZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($Config.Username)-$($Config.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
   $ModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolatey"
-
-
 
 
 
@@ -153,8 +151,6 @@ function Update-SwissHost {
   # https://community.idera.com/database-tools/powershell/powertips/b/tips/posts/extract-specific-files-from-zip-archive
   Write-Host "Install <repo>/Module/** as a PowerShell module into $ModulesFolder"
   if (-not (Test-Path $ModulesFolder)) { New-Item $ModulesFolder -ItemType Directory | Out-Null }
-  # Extract all the PostInstallationActivities into Automated Lab so that projects can bring them into their VM's
-  
   Add-Type -AssemblyName System.IO.Compression.FileSystem
   $Zip = [System.IO.Compression.ZipFile]::OpenRead($TempRepositoryZipPath)
   $Zip.Entries | 
@@ -171,6 +167,24 @@ function Update-SwissHost {
       }
     }
   $Zip.Dispose()
+  Install-Module SwissChocolatey -Force
+  
+
+
+
+  # Make sure that Update-Swisshost function gets called at startup
+  # https://stackoverflow.com/questions/40569045/register-scheduledjob-as-the-system-account-without-having-to-pass-in-credentia
+  $accountId = "NT AUTHORITY\SYSTEM"
+  $AutoUpdateTrigger = New-JobTrigger -AtStartup
+  $JobOptions = New-ScheduledJobOption -StartIfOnBattery -RunElevated
+  $Task = Get-ScheduledJob -Name $Config.AutoUpdateJobName -ErrorAction SilentlyContinue
+  if ($Task -ne $null) { Unregister-ScheduledJob $Task -Confirm:$False }
+  if ($Config.AutoUpdateEnabled)
+  {
+    Register-ScheduledJob -Name $Config.AutoUpdateJobName -Trigger $AutoUpdateTrigger -ScheduledJobOption $JobOptions -ScriptBlock { Update-SwissHost -AtStartup }
+    $TaskPrincipal = New-ScheduledTaskPrincipal -UserID $accountId -LogonType ServiceAccount -RunLevel Highest
+    Set-ScheduledTask -TaskPath '\Microsoft\Windows\PowerShell\ScheduledJobs' -TaskName $Config.AutoUpdateJobName -Principal $TaskPrincipal
+  }
 
 
 
@@ -188,8 +202,14 @@ function Update-SwissHost {
     {
       Write-Host "Installing Hyper-V..."
       Get-WindowsOptionalFeature -Online -FeatureName *hyper-v*all | Enable-WindowsOptionalFeature -Online
-      Write-Host "Restarting (run the script again)..."
-      Restart-Computer -Delay 5
+      if ($Config.AutoUpdateEnabled)
+      {
+        Restart-Computer
+      }
+      else
+      {
+        Write-Host "Auto-update is disabled. Please restart the computer and re-run $($MyInvocation.MyCommand.Name)"
+      }
       return
     }
 
