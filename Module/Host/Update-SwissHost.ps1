@@ -179,6 +179,7 @@ function Update-SwissHost {
 
   # Make sure that Update-Swisshost function gets called at startup
   # https://stackoverflow.com/questions/40569045/register-scheduledjob-as-the-system-account-without-having-to-pass-in-credentia
+  # Output: %LOCALAPPDATA%\Microsoft\Windows\PowerShell\ScheduledJobs\UpdateSwissChocolateyAtStartup
   #$accountId = "NT AUTHORITY\SYSTEM"
   $accountId = ((Get-WMIObject -class Win32_ComputerSystem | Select-Object -ExpandProperty username)) 
   $AutoUpdateTrigger = New-JobTrigger -AtStartup
