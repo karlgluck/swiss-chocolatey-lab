@@ -132,39 +132,6 @@ function Update-SwissHost {
 
 
 
-
-
-  # Require Hyper-V
-  try
-  {
-    $previousErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Stop'
-
-    # Action: Install Hyper-V and CLI components (requires restart)
-    if (((Get-WindowsOptionalFeature -Online -FeatureName *hyper-v*all*) | % { $_.State }) -contains "Disabled")
-    {
-      Write-Host "Installing Hyper-V..."
-      Get-WindowsOptionalFeature -Online -FeatureName *hyper-v*all | Enable-WindowsOptionalFeature -Online
-      Write-Host "Restarting (run the script again)..."
-      Restart-Computer -Delay 5
-      return
-    }
-
-    Write-Host "Hyper-V is installed"
-  }
-  catch
-  {
-    Write-Host -ForegroundColor Red ">>>> Must be run on a Windows version that supports Hyper-V <<<<"
-    return
-  }
-  finally
-  {
-    $ErrorActionPreference = $previousErrorActionPreference
-  }
-
-
-
-
   # Download the entire repository
   try
   {
@@ -204,6 +171,56 @@ function Update-SwissHost {
       }
     }
   $Zip.Dispose()
- 
+
+
+
+
+
+
+  # Require Hyper-V
+  try
+  {
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Stop'
+
+    # Action: Install Hyper-V and CLI components (requires restart)
+    if (((Get-WindowsOptionalFeature -Online -FeatureName *hyper-v*all*) | % { $_.State }) -contains "Disabled")
+    {
+      Write-Host "Installing Hyper-V..."
+      Get-WindowsOptionalFeature -Online -FeatureName *hyper-v*all | Enable-WindowsOptionalFeature -Online
+      Write-Host "Restarting (run the script again)..."
+      Restart-Computer -Delay 5
+      return
+    }
+
+    Write-Host "Hyper-V is installed"
+  }
+  catch
+  {
+    Write-Host -ForegroundColor Red ">>>> Must be run on a Windows version that supports Hyper-V <<<<"
+    return
+  }
+  finally
+  {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+
+
+
+
+  # Workaround for built-in version of Pester shipped with Windows
+  # https://pester.dev/docs/introduction/installation
+  Install-Module -Name Pester -Force -SkipPublisherCheck
+
+
+
+  
+  # Install AutomatedLab to manage Hyper-V
+  # https://www.verboon.info/2021/08/deploying-windows-11-in-minutes-with-automatedlab/
+  Write-Host "Setting up AutomatedLab..."
+  Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
+  Install-Module AutomatedLab -AllowClobber
+  $LabSourcesFolder = New-LabSourcesFolder -Drive $Config.AutomatedLab.SourcesFolderDrive
+  Write-Host "AutomatedLab ready in $LabSourcesFolder"
 }
 
