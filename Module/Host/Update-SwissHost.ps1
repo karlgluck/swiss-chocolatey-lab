@@ -93,7 +93,7 @@ function Update-SwissHost {
   }
 
   # Grab the configuration from the repository and merge it into $Config
-  $RemoteConfig = @{}
+  $RemoteConfig = [PSCustomObject]@{}
   try
   {
     $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $HostSpecificConfigUrl -Headers $Headers).Content | ConvertFrom-Json
