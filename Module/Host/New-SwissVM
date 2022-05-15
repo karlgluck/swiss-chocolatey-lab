@@ -1,0 +1,90 @@
+<#
+.DESCRIPTION
+  Installs a new SwissVM from the given repository in the account defined by .swisshost
+#>
+function New-SwissVM {
+  [CmdletBinding()]
+  Param (
+    [Parameter(Mandatory,Position=0)]
+    [string]$Repository,
+
+    [string]$Branch="main",
+
+    [string]$VMName
+  )
+
+  # By default, the VM's name is the same as the repository's
+  if ($null -eq $VMName)
+  {
+    $VMName = $Repository
+  }
+
+  # Load our configuration (expect it to exist)
+  $HostConfigPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) ".swisshost"
+  if (Test-Path $HostConfigPath)
+  {
+    Write-Host "Loading host config from $HostConfigPath"
+    $HostConfig = Get-Content $HostConfigPath | ConvertFrom-Json
+  }
+  else
+  {
+    Write-Host -ForegroundColor Red "No configuration found. Try Update-SwissHost? Expected: $ConfigPath"
+    return      
+  }
+
+  # Get the config for the target project at the moment
+  $Headers = @{Authorization=('token ' + $HostConfig.Token); 'Cache-Control'='no-cache'}
+  $GuestConfig = [PSCustomObject]@{Repository=$Repository; Branch=$Branch}
+  $GuestSpecificConfigUrl = "https://raw.githubusercontent.com/$($HostConfig.UserName)/$($GuestConfig.Repository)/$($GuestConfig.Branch)/.swiss/config.json"
+  try
+  {
+    $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $GuestSpecificConfigUrl -Headers $Headers).Content | ConvertFrom-Json
+    Write-Host "Read guest config from $GuestSpecificConfigUrl"
+  }
+  catch
+  {
+    Write-Host -ForegroundColor Red "Missing configuration file: $GuestSpecificConfigUrl"
+    return
+  }
+  finally
+  {
+    if (Test-Path 'variable:RemoteConfig')
+    {
+      # Move properties into GuestConfig
+      $RemoteConfig.PSObject.Members | Where-Object { $_.MemberType -eq "NoteProperty" } | ForEach-Object { Add-Member -Name $_.Name -Value $_.Value -Force -InputObject $GuestConfig -MemberType NoteProperty }
+      Remove-Variable -Name RemoteConfig
+    }
+  }
+
+  
+  # Make sure that we have the ISO to install this operating system
+  $LabSourcesISOPath = Join-Path (Get-LabSourcesLocation) "ISOs"
+  Write-Host -ForegroundColor Yellow "Checking for a Windows .iso file in $LabSourcesISOPath using Fido ($($HostConfig.FidoScriptUrl))"
+  Invoke-Expression ( 'function Get-WindowsIsoUrl {' + (New-Object System.Net.WebClient).DownloadString($HostConfig.FidoScriptUrl + '?ts=' + (Get-Date -uformat %s)) + '}');
+  $isoUrl = Get-WindowsIsoUrl -Win $GuestConfig.OperatingSystem.Name -Rel $GuestConfig.OperatingSystem.Release -Ed $GuestConfig.OperatingSystem.Edition -Lang $GuestConfig.OperatingSystem.Language -Arch $GuestConfig.OperatingSystem.Architecture -GetUrl $True
+  $isoFileName = [regex]::Match($isoUrl, '.*\/(.*\.iso).*').Groups[1].Value
+
+  $downloadedFileFullPath = Join-Path $LabSourcesISOPath $isoFileName
+  if (Test-Path -Path $downloadedFileFullPath -PathType Leaf)
+  {
+      Write-Host "Matching installer available at $downloadedFileFullPath"
+  }
+  else
+  {
+      Write-Host "Downloading $isoFileName from $isoUrl..."
+      try
+      {
+          Invoke-WebRequest -UseBasicParsing -Uri $isoUrl -OutFile $downloadedFileFullPath
+      }
+      catch
+      {
+          Write-Host -ForegroundColor Red ">>>> Failed to download Windows from '$isoUrl' to '$downloadedFileFullPath' <<<<"
+          return
+      }
+      Write-Host "Downloaded matching installer to $downloadedFileFullPath"
+  }
+  
+  
+
+}
+  
