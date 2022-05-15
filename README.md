@@ -1,5 +1,5 @@
-# SWISS Chocolatey
-**S**et up a **W**orkstation **I**nstantly with a **S**imple **S**tatement... using **Chocolatey**!
+# SWISS Chocolatey Lab
+**S**et up a **W**orkstation **I**nstantly with **S**imple **S**cripts... using [Chocolatey](https://chocolatey.org/) and [AutomatedLab](https://automatedlab.org/)!
 
 This repo is used to set up a Win11 workstation host with disposable Hyper-V containers for working on projects in a clean environment. It supports both public and private repositories.
 
