@@ -188,6 +188,7 @@ function Update-SwissHost {
     }
     if ($Config.AutoUpdateEnabled)
     {
+      Write-Host "Registering startup job to run Update-SwissHost: $($Config.AutoUpdateJobName)"
       Register-ScheduledJob -Name $Config.AutoUpdateJobName -Trigger $AutoUpdateTrigger -ScheduledJobOption $JobOptions -ScriptBlock { Import-Module "SwissChocolateyLab" ; Update-SwissHost -Scheduled } | Out-Null
       $TaskPrincipal = New-ScheduledTaskPrincipal -UserID $accountId -LogonType Interactive -RunLevel Highest
       Set-ScheduledTask -TaskPath '\Microsoft\Windows\PowerShell\ScheduledJobs' -TaskName $Config.AutoUpdateJobName -Principal $TaskPrincipal | Out-Null
@@ -197,6 +198,7 @@ function Update-SwissHost {
   {
     # If the config disables auto-update but we're currently running an auto-update, use another task to unschedule this in the future
     $RemoveScheduledJobName = "Remove$($Config.AutoUpdateJobName)"
+    Write-Host "Removing startup job using a helper: $RemoveScheduledJobName"
     $RemoveScheduledJobTrigger = New-JobTrigger -Once -At (get-date).AddSeconds(10)
     $JobOptions = New-ScheduledJobOption -StartIfOnBattery -RunElevated
     $Script = @"
