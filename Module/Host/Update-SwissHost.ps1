@@ -91,6 +91,10 @@ function Update-SwissHost {
     Write-Host -ForegroundColor Red ">>>> Must run in an Administrator PowerShell terminal (open with Win+X, A) <<<<"
     return
   }
+  
+  # Always allow scripts to run on this system and set the TLS security protocol
+  Set-ExecutionPolicy Bypass -Scope Machine -Force
+  [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
 
   # Grab the configuration from the repository and merge it into $Config
   $RemoteConfig = [PSCustomObject]@{}
@@ -169,8 +173,6 @@ function Update-SwissHost {
     }
   $Zip.Dispose()
   Import-Module SwissChocolatey -Force
-  
-
 
 
   # Make sure that Update-Swisshost function gets called at startup
@@ -185,7 +187,7 @@ function Update-SwissHost {
   }
   if ($Config.AutoUpdateEnabled)
   {
-    Register-ScheduledJob -Name $Config.AutoUpdateJobName -Trigger $AutoUpdateTrigger -ScheduledJobOption $JobOptions -ScriptBlock { Update-SwissHost -AtStartup } | Out-Null
+    Register-ScheduledJob -Name $Config.AutoUpdateJobName -Trigger $AutoUpdateTrigger -ScheduledJobOption $JobOptions -ScriptBlock { Set-ExecutionPolicy Bypass -Scope Process -Force ; Update-SwissHost -AtStartup } | Out-Null
     $TaskPrincipal = New-ScheduledTaskPrincipal -UserID $accountId -LogonType ServiceAccount -RunLevel Highest
     Set-ScheduledTask -TaskPath '\Microsoft\Windows\PowerShell\ScheduledJobs' -TaskName $Config.AutoUpdateJobName -Principal $TaskPrincipal | Out-Null
   }
