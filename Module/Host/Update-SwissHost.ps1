@@ -13,15 +13,24 @@ function Update-SwissHost {
     [Switch]$AtStartup
   )
 
-  # Precondition: Administrator privileges
+  # Local Variables
+  $Config = @{}
+  $ConfigPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) ".swisshost"
+
+  # Preamble
+  if ($null -ne $Bootstrap)
+  {
+    Write-Host "Bootstrapping '${env:ComputerName}'"
+  }
+
+  # Require Administrator privileges
   if (-not (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)))
   {
     Write-Host -ForegroundColor Red ">>>> Must run in an Administrator PowerShell terminal (open with Win+X, A) <<<<"
     return
   }
 
-
-  # Prerequisite: Windows version with Hyper-V
+  # Require Hyper-V
   try
   {
     $previousErrorActionPreference = $ErrorActionPreference
@@ -30,12 +39,12 @@ function Update-SwissHost {
     # Action: Install Hyper-V and CLI components (requires restart)
     if (((Get-WindowsOptionalFeature -Online -FeatureName *hyper-v*all*) | % { $_.State }) -contains "Disabled")
     {
-      Write-Host "Hyper-V is enabled"
+      Write-Host "Installing Hyper-V..."
       Get-WindowsOptionalFeature -Online -FeatureName *hyper-v*all | Enable-WindowsOptionalFeature -Online
       return
     }
 
-    Write-Host "Hyper-V is enabled"
+    Write-Host "Hyper-V is installed"
   }
   catch
   {
@@ -46,9 +55,25 @@ function Update-SwissHost {
   {
     $ErrorActionPreference = $previousErrorActionPreference
   }
-  
+
+  # Get the repository's configuration file
   if ($null -ne $Bootstrap)
   {
-    Write-Host "Bootstrapping!"
+    $Match = [RegEx]::Match($Bootstrap['Url'], '[.]com\/([^\/]+)\/([^\/]+)\/(\S+)\/Module\/Host\/Update-SwissHost.ps1')
+    if ($Match.Success)
+    {
+      $Config['username'] = $Match.Groups[1].Value
+      $Config['repository'] = $Match.Groups[2].Value
+      $Config['branch'] = $Match.Groups[3].Value
+    }
+    else
+    {
+      Write-Host -ForegroundColor Red ">>>> URL doesn't match expected format (see README.md) <<<<"
+      return
+    }
+  }
+  else
+  {
+    # Not bootstrapping
   }
 }
