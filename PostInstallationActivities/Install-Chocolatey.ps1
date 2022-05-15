@@ -1,3 +1,7 @@
+
+# sentinel so that we know Chocolatey was installed
+Get-Date | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("Desktop")) "LastRanInstallChocolatey.txt")
+
 $previousErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = 'Stop'
 shouldInstallChocolatey = $False
