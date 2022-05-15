@@ -133,10 +133,46 @@ function New-SwissVM {
   Set-LabInstallationCredential -Username $HostConfig.Username -Password $Repository
   $MemoryInBytes = (Invoke-Expression $GuestConfig.VirtualMachine.Memory)
   Add-LabMachineDefinition -Name $VMName -Memory $MemoryInBytes -Network $VirtualNetworkName -OperatingSystem $GuestConfig.OperatingSystem.Version -PostInstallationActivity $postInstallActivity -ToolsPath "$labSources\Tools" -ToolsPathDestination 'C:\Tools'
+
+  # Copy the PowerShell module into the SwissChocolateyLab PostInstallationActivity folder so it gets copied into the VM
+  $HostModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
+  if (-not (Test-Path $HostModulesFolder))
+  {
+    Write-Host -ForegroundColor Red "Missing host modules folder. Try Update-SwissHost? Expected: $HostModulesFolder"
+    return
+  }
+  $HostPostInstallationActivitiesFolder = (Join-Path (Get-LabSourcesLocation) "PostInstallationActivities/SwissChocolateyLab")
+  Copy-Item -Recurse -Path $HostModulesFolder -Destination $HostPostInstallationActivitiesFolder
+
+<#
+  # Copy the PowerShell module into the VM
+  $HostModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
+  if (-not (Test-Path $HostModulesFolder))
+  {
+    Write-Host -ForegroundColor Red "Missing host modules folder. Try Update-SwissHost? Expected: $HostModulesFolder"
+    return
+  }
+  $Match = [RegEx]::Match(($env:PSModulePath -split ';')[0], "\\$($env:USERNAME)\\(.*)")
+  if ($Match.Success)
+  {
+    $DestinationFolderPath = "C:\Users\$($HostConfig.Username)\$($Match.Groups[0].Value)"
+  }
+  else
+  {
+    $DestinationFolderPath = "C:\Users\$($HostConfig.Username)\Documents\WindowsPowerShell\Modules"
+    Write-Host -ForegroundColor Red "Unable to parse the PSModulePath; using default: $DestinationFolderPath"
+  }
+  Copy-LabFileItem -Recurse -Path $HostModulesFolder -ComputerName $VMName -DestinationFolderPath $DestinationFolderPath
+#>
+
+  # Finally, create our network and VM
   Install-Lab
+
+  # Move the .swissguest config into the VM
   $GuestConfig | ConvertTo-Json | Out-File -FilePath $tempSwissGuestPath
-  Write-Host "Wrote $tempSwissGuestPath"
   Copy-LabFileItem -Path $tempSwissGuestPath -ComputerName $VMName -DestinationFolderPath "C:\Users\$($HostConfig.Username)\Documents"
+
+
   Show-LabDeploymentSummary -Detailed
 
 
