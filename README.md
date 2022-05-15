@@ -27,11 +27,16 @@ You will be asked to provide two additional inputs:
 
 Bootstrapping will then continue. If this is the first time you're running this on a fresh host, installing Hyper-V will require restarting your computer. You will need to manually run `Update-SwissHost` after rebooting to continue.
 
-Once the setup script completes, you're ready to install a VM. If you make changes to the swiss-chocolatey repository, your host will automatically update to the latest contents every time the host is restarted or `Update-SwissHost` is invoked.
+Once the setup script completes, you're ready to install a VM.
 
 ### Configuring a repository
 
-To use a repository as a VM, create a file named `/.swiss/config.json` to configure its settings. You can also add `/.swiss/packages.config` to configure Chocolatey packages to install.
+Repositories use the `/.swiss` subdirectory to store their own environment setup configuration and scripts:
+
+| File                    | Description                                                             |
+|-------------------------|-------------------------------------------------------------------------|
+|`/.swiss/config.json`    | Top-level configuration object. [Example](Config/Generic4GB.swissguest) |
+|`/.swiss/packages.config`| Chocolatey package file definition, installed and updated automatically |
 
 ### Managing a VM
 
@@ -40,10 +45,14 @@ On the host in an administrator PowerShell terminal with any of these commands:
 ```
 New-SwissVM
 New-SwissVM <repository>
-New-SwissVM -Repository <repository> -Branch <branch> -VMName <name>
+New-SwissVM -Repository <repository> -Branch <branch> -VMName <name> -UseCommonConfig <name>
 ```
 
-By default, `Add-SwissVM` reads from the `main` branch and will create a VM with the same name as the repository. Login credentials will be your GitHub username with the name of the repository as a password.
+By default, `Add-SwissVM` reads from the `main` branch and will create a VM with the same name as the repository.
+
+`-UseCommonConfig` allows you to install a SwissVM without having to edit the repository by grabbing one of the `*.swissguest` files from the [Config](./Config) folder in this repository.
+
+Login credentials will be your GitHub username with the name of the repository as a password.
 
 After creation, launch the VM on the host:
 
