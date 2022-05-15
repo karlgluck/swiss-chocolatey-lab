@@ -16,7 +16,7 @@ function Update-SwissHost {
 
 
   # sentinel so that we know this was run at startup
-  Get-Date | Out-File -FilePath "C:\Users\TREEHOUSE\Desktop\LastRanUpdateSwissHost.txt"
+  Get-Date | Out-File -FilePath "C:\LastRanUpdateSwissHost.txt"
 
 
 
@@ -192,7 +192,7 @@ function Update-SwissHost {
   if ($Config.AutoUpdateEnabled)
   {
     Register-ScheduledJob -Name $Config.AutoUpdateJobName -Trigger $AutoUpdateTrigger -ScheduledJobOption $JobOptions -ScriptBlock { Set-ExecutionPolicy Bypass -Scope Process -Force ; Update-SwissHost -AtStartup } | Out-Null
-    $TaskPrincipal = New-ScheduledTaskPrincipal -UserID $accountId -LogonType ServiceAccount -RunLevel Highest
+    $TaskPrincipal = New-ScheduledTaskPrincipal -UserID $accountId -LogonType Interactive -RunLevel Highest
     Set-ScheduledTask -TaskPath '\Microsoft\Windows\PowerShell\ScheduledJobs' -TaskName $Config.AutoUpdateJobName -Principal $TaskPrincipal | Out-Null
   }
 
