@@ -20,18 +20,18 @@ Copy+Paste the bootstrap script into PowerShell:
 Set-ExecutionPolicy Bypass -Scope Process -Force ; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072 ; (Invoke-WebRequest -Method Get -Uri ($__URL = (Read-Host -Prompt "Update-SwissHost.ps1") -replace "github\.com\/(.*)\/blob\/(.*)",'raw.githubusercontent.com/$1/$2') -Headers @{Authorization=@('token ',($__TOKEN = Read-Host -Prompt "GitHub Token")) -join ''; 'Cache-Control'='no-cache'}).Content | Invoke-Expression ; Update-SwissHost -Bootstrap ([PSCustomObject]@{Token=$__TOKEN; Url=$__URL}) ; Remove-Variable @('__TOKEN','__URL')
 ````
 
-Next, you will be asked for two additional inputs.
+You will be asked to provide two additional inputs:
 
-1. Copy-paste the URL to `Update-SwissHost.ps1` into the first prompt: [Update-SwissHost.ps1](./Module/Host/Update-SwissHost.ps1)
-2. Paste your [GitHub Personal Access Token](https://github.com/settings/tokens) into the second prompt
+1. Copy-paste the URL to [Update-SwissHost.ps1](./Module/Host/Update-SwissHost.ps1) into the first prompt for "Update-SwissHost.ps1"
+2. Paste your [GitHub Personal Access Token](https://github.com/settings/tokens) into the second prompt for "GitHub Token"
 
-Bootstrapping will then continue. If this is the first time you're running this on a fresh host, installing Hyper-V will require restarting your computer. The updater will automatically continue afterward.
+Bootstrapping will then continue. If this is the first time you're running this on a fresh host, installing Hyper-V will require restarting your computer. You will need to manually run `Update-SwissHost` after rebooting to continue.
 
 Once the setup script completes, you're ready to install a VM. If you make changes to the swiss-chocolatey repository, your host will automatically update to the latest contents every time the host is restarted or `Update-SwissHost` is invoked.
 
 ### Configuring a repository
 
-To use a repository as a VM, create a file named `/.swiss/config.json` to configure its settings.
+To use a repository as a VM, create a file named `/.swiss/config.json` to configure its settings. You can also add `/.swiss/packages.config` to configure Chocolatey packages to install.
 
 ### Managing a VM
 
