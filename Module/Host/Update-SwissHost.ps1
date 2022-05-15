@@ -77,7 +77,7 @@ function Update-SwissHost {
   # Now that we have the config, define derived variables
   $GenericConfigUrl = "$($Config.RawUrl)/Config/.swisshost"
   $HostSpecificConfigUrl = "$($Config.RawUrl)/Config/${env:ComputerName}.swisshost"
-  $Headers = @{Authorization=@('token ',$Config.Token) -join ''; 'Cache-Control'='no-cache'}
+  $Headers = @{Authorization=@('token ',$Config.Token) -join ''; 'Cache-Control'='no-store'}
   $TempRepositoryZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($Config.Username)-$($Config.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
   $ModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolatey"
 
@@ -261,7 +261,7 @@ function Update-SwissHost {
 
 
   # 
-  # now, we're ready to New-SwissVM
+  # Now, we're ready to use New-SwissVM
   #
 
 }
