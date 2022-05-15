@@ -38,9 +38,9 @@ To use a repository as a VM, create a file named `/.swiss/config.json` to config
 On the host in an administrator PowerShell terminal with any of these commands:
 
 ```
-Add-SwissVM
-Add-SwissVM <repository>
-Add-SwissVM -Repository <repository> -Branch <branch> -VMName <name>
+New-SwissVM
+New-SwissVM <repository>
+New-SwissVM -Repository <repository> -Branch <branch> -VMName <name>
 ```
 
 By default, `Add-SwissVM` reads from the `main` branch and will create a VM with the same name as the repository.
