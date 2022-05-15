@@ -13,6 +13,11 @@ function Update-SwissHost {
     [Switch]$AtStartup
   )
 
+
+
+
+
+
   # Initialize the config with whatever already exists
   $ConfigPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) ".swisshost"
   if (Test-Path $ConfigPath)
@@ -64,10 +69,22 @@ function Update-SwissHost {
     }
   }
 
+
+
+
+
+
   # Now that we have the config, define the rest of the local variables
   $GenericConfigUrl = "$($Config.RawUrl)/Config/.swisshost"
   $HostSpecificConfigUrl = "$($Config.RawUrl)/Config/${env:ComputerName}.swisshost"
   $Headers = @{Authorization=@('token ',$Config.Token) -join ''; 'Cache-Control'='no-cache'}
+  $TempRepositoryZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($Config.Username)-$($Config.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
+  $ModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolatey"
+
+
+
+
+
 
   # Require Administrator privileges
   if (-not (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)))
@@ -112,6 +129,11 @@ function Update-SwissHost {
   # Write the host configuration file
   ConvertTo-Json $Config | Out-File -FilePath $ConfigPath
 
+
+
+
+
+
   # Require Hyper-V
   try
   {
@@ -140,5 +162,48 @@ function Update-SwissHost {
     $ErrorActionPreference = $previousErrorActionPreference
   }
 
+
+
+
+  # Download the entire repository
+  try
+  {
+    Write-Host "Downloading latest '$($Config.Repository)' branch $($Config.Branch) -> $TempRepositoryZipPath"
+    Invoke-WebRequest -Headers $SwissHeaders -Uri $Config.ZipUrl -OutFile $TempRepositoryZipPath
+    $ZipFileHash = (Get-FileHash $TempRepositoryZipPath -Algorithm SHA256).Hash
+    Write-Host " > Downloaded, SHA256 = $ZipFileHash"
+  }
+  catch
+  {
+    Write-Host -ForegroundColor Red "Unable to download repository ZIP file from $($Config.ZipUrl)"
+    return
+  }
+
+
+
+
+  # Install /Module/** as a PowerShell module
+  # https://community.idera.com/database-tools/powershell/powertips/b/tips/posts/extract-specific-files-from-zip-archive
+  Write-Host "Install <repo>/Module/** as a PowerShell module into $ModulesFolder"
+  if (-not (Test-Path $ModulesFolder)) { New-Item $ModulesFolder -ItemType Directory | Out-Null }
+  # Extract all the PostInstallationActivities into Automated Lab so that projects can bring them into their VM's
+  
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  $Zip = [System.IO.Compression.ZipFile]::OpenRead($TempRepositoryZipPath)
+  $Zip.Entries | 
+    Where-Object { $_.Name -ne "" } |
+    ForEach-Object {
+      $Match = [RegEx]::Match($_.FullName, "\/Module\/(.*)")
+      if ($Match.Success)
+      {
+        $FilePath = Join-Path $ModulesFolder $Match.Groups[1].Value
+        $DirectoryPath = Split-Path -Parent $FilePath
+        if (-not (Test-Path $DirectoryPath)) { New-Item $DirectoryPath -ItemType Directory | Out-Null }
+        Write-Host " > Extracting $($_.FullName)"
+        [System.IO.Compression.ZipFileExtensions]::ExtractToFile($_, $FilePath, $true) | Out-Null
+      }
+    }
+  $Zip.Dispose()
+ 
 }
 
