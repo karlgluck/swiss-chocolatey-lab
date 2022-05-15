@@ -93,7 +93,7 @@ function Update-SwissHost {
   }
   
   # Always allow scripts to run on this system and set the TLS security protocol
-  Set-ExecutionPolicy Bypass -Scope Machine -Force
+  Set-ExecutionPolicy Bypass -Scope LocalMachine -Force
   [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
 
   # Grab the configuration from the repository and merge it into $Config
