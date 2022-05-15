@@ -121,8 +121,8 @@ function Update-SwissHost {
     {
       # Move properties into Config
       $RemoteConfig.PSObject.Members | Where-Object { $_.MemberType -eq "NoteProperty" } | ForEach-Object { Add-Member -Name $_.Name -Value $_.Value -Force -InputObject $Config -MemberType NoteProperty }
+      Remove-Variable -Name RemoteConfig
     }
-    Remove-Variable -Name RemoteConfig
   }
 
   # Write the host configuration file
