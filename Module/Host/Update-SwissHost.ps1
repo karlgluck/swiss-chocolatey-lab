@@ -21,6 +21,22 @@ function Update-SwissHost {
   if ($null -ne $Bootstrap)
   {
     Write-Host "Bootstrapping '${env:ComputerName}'"
+    if (Test-Path $ConfigPath)
+    {
+      Write-Host "Already installed; running update instead. If you want to bootstrap again, delete '$ConfigPath'."
+      Write-Host -NoNewline "Continuing in 3... "
+      Start-Sleep 1
+      Write-Host -NoNewLine "2... "
+      Start-Sleep 1
+      Write-Host -NoNewLine "1... "
+      Start-Sleep 1
+      Write-Host "continuing update"
+      Remove-Variable -Name "Bootstrap"
+    }
+  }
+  else
+  {
+
   }
 
   # Require Administrator privileges
@@ -71,9 +87,24 @@ function Update-SwissHost {
       Write-Host -ForegroundColor Red ">>>> URL doesn't match expected format (see README.md) <<<<"
       return
     }
+
+    # Grab the configuration from the repository and merge it into $Config
+
+    # Write the host configuration file
+    ConvertTo-Json $Config | Out-File -FilePath $ConfigPath
   }
   else
   {
-    # Not bootstrapping
+    # Expect a config file to exist, otherwise we can't know what to do
+    if (Test-Path $ConfigPath)
+    {
+      $Config = Get-Item $ConfigPath | ConvertFrom-Json
+    }
+    else
+    {
+      Write-Host -ForegroundColor Red ">>>> Missing config file. Try bootstrapping again? <<<<"
+      Write-Host -ForegroundColor Red "Expected: $ConfigPath"
+      return
+    }
   }
 }
