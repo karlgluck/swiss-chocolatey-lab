@@ -9,5 +9,5 @@ function Remove-SwissVM {
     [string]$VMName
   )
 
-  Remove-Lab -Name "${VMName}Lab" -RemoveExternalSwitches
+  Remove-Lab -Name "${VMName}SCLLab" -RemoveExternalSwitches
 }
