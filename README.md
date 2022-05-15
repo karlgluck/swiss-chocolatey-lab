@@ -17,7 +17,7 @@ On the host, press `Win+X,A` to open an administrator PowerShell terminal
 Copy+Paste the bootstrap script into PowerShell:
 
 ````
-Set-ExecutionPolicy Bypass -Scope Process -Force ; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072 ; Invoke-WebRequest -Method Get -Uri ($__URL = (Read-Host -Prompt "Update-SwissHost.ps1") -replace "github[.]com/(.*)/blob/(.*)",'raw.githubusercontent.com/$1/$2') -Headers @{Authorization=@('token ',($__TOKEN = Read-Host -Prompt "GitHub Token")) -join ''; 'Cache-Control'='no-cache'} | ForEach-Object { $_.Content } | Invoke-Expression ; Update-SwissHost -Bootstrap @{Token=$__TOKEN; Url=$__URL} ; Remove-Variable @('__TOKEN','__URL')
+Set-ExecutionPolicy Bypass -Scope Process -Force ; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072 ; Invoke-WebRequest -Method Get -Uri ($__URL = (Read-Host -Prompt "Update-SwissHost.ps1") -replace "github\.com\/(.*)\/blob\/(.*)",'raw.githubusercontent.com/$1/$2') -Headers @{Authorization=@('token ',($__TOKEN = Read-Host -Prompt "GitHub Token")) -join ''; 'Cache-Control'='no-cache'} | ForEach-Object { $_.Content } | Invoke-Expression ; Update-SwissHost -Bootstrap @{Token=$__TOKEN; Url=$__URL} ; Remove-Variable @('__TOKEN','__URL')
 ````
 
 Next, you will be asked for two additional inputs.
