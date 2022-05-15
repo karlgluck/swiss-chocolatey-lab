@@ -182,7 +182,7 @@ function Update-SwissHost {
   # Output: %LOCALAPPDATA%\Microsoft\Windows\PowerShell\ScheduledJobs\UpdateSwissChocolateyAtStartup
   #$accountId = "NT AUTHORITY\SYSTEM"
   $accountId = ((Get-WMIObject -class Win32_ComputerSystem | Select-Object -ExpandProperty username)) 
-  $AutoUpdateTrigger = New-JobTrigger -AtStartup
+  $AutoUpdateTrigger = New-JobTrigger -AtLogOn
   $JobOptions = New-ScheduledJobOption -StartIfOnBattery -RunElevated
   $Task = Get-ScheduledJob -Name $Config.AutoUpdateJobName -ErrorAction SilentlyContinue
   if ($Task -ne $null)
