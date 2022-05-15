@@ -16,11 +16,35 @@ function Update-SwissHost {
   # Precondition: Administrator privileges
   if (-not (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)))
   {
-      Write-Host -ForegroundColor Red "Must run in an Administrator PowerShell terminal (open with Win+X, A)"
+      Write-Host -ForegroundColor Red ">>>> Must run in an Administrator PowerShell terminal (open with Win+X, A) <<<<"
       return
   }
+
+
+  # Prerequisite: Windows version with Hyper-V
+  try
+  {
+      $previousErrorActionPreference = $ErrorActionPreference
+      $ErrorActionPreference = 'Stop'
+
+      # Action: Install Hyper-V and CLI components (requires restart)
+      if (((Get-WindowsOptionalFeature -Online -FeatureName *hyper-v*all*) | % { $_.State }) -contains "Disabled")
+      {
+          Get-WindowsOptionalFeature -Online -FeatureName *hyper-v*all | Enable-WindowsOptionalFeature -Online
+          return
+      }
+  }
+  catch
+  {
+      Write-Host -ForegroundColor Red ">>>> Must be run on a Windows version that supports Hyper-V <<<<"
+      return
+  }
+  finally
+  {
+      $ErrorActionPreference = $previousErrorActionPreference
+  }
   
-  if ($Bootstrap -ne $null)
+  if ($null -ne $Bootstrap)
   {
     Write-Host "Bootstrapping!"
   }
