@@ -21,18 +21,6 @@ function Update-SwissHost {
   if ($null -ne $Bootstrap)
   {
     Write-Host "Bootstrapping '${env:ComputerName}'"
-    if (Test-Path $ConfigPath)
-    {
-      Write-Host "Already installed; running update instead. If you want to bootstrap again, delete '$ConfigPath'."
-      Write-Host -NoNewline "Continuing in 3... "
-      Start-Sleep 1
-      Write-Host -NoNewLine "2... "
-      Start-Sleep 1
-      Write-Host -NoNewLine "1... "
-      Start-Sleep 1
-      Write-Host "continuing update"
-      Remove-Variable -Name "Bootstrap"
-    }
   }
   else
   {
@@ -72,39 +60,56 @@ function Update-SwissHost {
     $ErrorActionPreference = $previousErrorActionPreference
   }
 
+  # Initialize the config with whatever already exists
+  if (Test-Path $ConfigPath)
+  {
+    (Get-Content $ConfigPath | ConvertFrom-Json).PSObject.Properties | ForEach-Object { $Config[$_.Name]= $_.Value }
+  }
+
   # Get the repository's configuration file
   if ($null -ne $Bootstrap)
   {
+    # Save the access token
+    $Config['token'] = $Bootstrap['Token']
+
+    # Parse repository configuration from the URL
     $Match = [RegEx]::Match($Bootstrap['Url'], '[.]com\/([^\/]+)\/([^\/]+)\/(\S+)\/Module\/Host\/Update-SwissHost.ps1')
     if ($Match.Success)
     {
       $Config['username'] = $Match.Groups[1].Value
       $Config['repository'] = $Match.Groups[2].Value
       $Config['branch'] = $Match.Groups[3].Value
+      $Config['raw_url'] = "https://raw.githubusercontent.com/$($Config['username'])/$($Config['repository'])/$($Config['branch'])"
+      $Config['zip_url'] = "https://github.com/$($Config['username'])/$($Config['repository'])/archive/refs/heads/$($Config['branch']).zip"
     }
     else
     {
       Write-Host -ForegroundColor Red ">>>> URL doesn't match expected format (see README.md) <<<<"
       return
     }
-
-    # Grab the configuration from the repository and merge it into $Config
-
-    # Write the host configuration file
-    ConvertTo-Json $Config | Out-File -FilePath $ConfigPath
   }
   else
   {
     # Expect a config file to exist, otherwise we can't know what to do
-    if (Test-Path $ConfigPath)
+    if (-not (Test-Path $ConfigPath))
     {
-      $Config = Get-Item $ConfigPath | ConvertFrom-Json
-    }
-    else
-    {
-      Write-Host -ForegroundColor Red ">>>> Missing config file. Try bootstrapping again? <<<<"
+      Write-Host -ForegroundColor Red ">>>> FATAL: Missing config file. Try bootstrapping again? <<<<"
       Write-Host -ForegroundColor Red "Expected: $ConfigPath"
       return
     }
   }
+
+  # More local variables
+  $GenericConfigUrl = "$($Config['raw_url'])/Config/.swisshost"
+  $HostSpecificConfigUrl = "$($Config['raw_url'])/Config/${env:ComputerName}.swisshost"
+  $Headers = @{Authorization=@('token ',$Config['Token']) -join ''; 'Cache-Control'='no-cache'}
+
+  # Grab the configuration from the repository and merge it into $Config
+  #Invoke-WebRequest -Method Get -Uri $HostSpecificConfigUrl -Headers $Headers
+  #Invoke-WebRequest -Method Get -Uri $GenericConfigUrl -Headers $Headers
+
+  # Write the host configuration file
+  ConvertTo-Json $Config | Out-File -FilePath $ConfigPath
+
+
 }
