@@ -175,19 +175,22 @@ function Update-SwissHost {
   # Make sure that Update-Swisshost function gets called at startup
   # https://stackoverflow.com/questions/40569045/register-scheduledjob-as-the-system-account-without-having-to-pass-in-credentia
   # Output: %LOCALAPPDATA%\Microsoft\Windows\PowerShell\ScheduledJobs\$JobName
-  $accountId = ((Get-WMIObject -class Win32_ComputerSystem | Select-Object -ExpandProperty username)) 
-  $AutoUpdateTrigger = New-JobTrigger -AtLogOn
-  $JobOptions = New-ScheduledJobOption -StartIfOnBattery -RunElevated
-  $Task = Get-ScheduledJob -Name $Config.AutoUpdateJobName -ErrorAction SilentlyContinue
-  if ($Task -ne $null)
+  if (-not $Scheduled)
   {
-    Unregister-ScheduledJob $Task -Confirm:$False
-  }
-  if ($Config.AutoUpdateEnabled)
-  {
-    Register-ScheduledJob -Name $Config.AutoUpdateJobName -Trigger $AutoUpdateTrigger -ScheduledJobOption $JobOptions -ScriptBlock { Import-Module "SwissChocolateyLab" ; Update-SwissHost -Scheduled } | Out-Null
-    $TaskPrincipal = New-ScheduledTaskPrincipal -UserID $accountId -LogonType Interactive -RunLevel Highest
-    Set-ScheduledTask -TaskPath '\Microsoft\Windows\PowerShell\ScheduledJobs' -TaskName $Config.AutoUpdateJobName -Principal $TaskPrincipal | Out-Null
+    $accountId = ((Get-WMIObject -class Win32_ComputerSystem | Select-Object -ExpandProperty username)) 
+    $AutoUpdateTrigger = New-JobTrigger -AtLogOn
+    $JobOptions = New-ScheduledJobOption -StartIfOnBattery -RunElevated
+    $Task = Get-ScheduledJob -Name $Config.AutoUpdateJobName -ErrorAction SilentlyContinue
+    if ($Task -ne $null)
+    {
+      Unregister-ScheduledJob $Task -Confirm:$False
+    }
+    if ($Config.AutoUpdateEnabled)
+    {
+      Register-ScheduledJob -Name $Config.AutoUpdateJobName -Trigger $AutoUpdateTrigger -ScheduledJobOption $JobOptions -ScriptBlock { Import-Module "SwissChocolateyLab" ; Update-SwissHost -Scheduled } | Out-Null
+      $TaskPrincipal = New-ScheduledTaskPrincipal -UserID $accountId -LogonType Interactive -RunLevel Highest
+      Set-ScheduledTask -TaskPath '\Microsoft\Windows\PowerShell\ScheduledJobs' -TaskName $Config.AutoUpdateJobName -Principal $TaskPrincipal | Out-Null
+    }
   }
 
 
