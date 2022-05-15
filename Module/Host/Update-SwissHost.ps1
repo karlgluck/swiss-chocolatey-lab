@@ -174,6 +174,7 @@ function Update-SwissHost {
 
   # Make sure that Update-Swisshost function gets called at startup
   # https://stackoverflow.com/questions/40569045/register-scheduledjob-as-the-system-account-without-having-to-pass-in-credentia
+  # tasks vs. jobs: https://devblogs.microsoft.com/scripting/using-scheduled-tasks-and-scheduled-jobs-in-powershell/
   # Output: %LOCALAPPDATA%\Microsoft\Windows\PowerShell\ScheduledJobs\$JobName
   if (-not $Scheduled)
   {
@@ -181,7 +182,7 @@ function Update-SwissHost {
     $AutoUpdateTrigger = New-JobTrigger -AtLogOn
     $JobOptions = New-ScheduledJobOption -StartIfOnBattery -RunElevated
     $Task = Get-ScheduledJob -Name $Config.AutoUpdateJobName -ErrorAction SilentlyContinue
-    if ($Task -ne $null)
+    if ($null -ne $Task)
     {
       Unregister-ScheduledJob $Task -Confirm:$False
     }
@@ -191,6 +192,23 @@ function Update-SwissHost {
       $TaskPrincipal = New-ScheduledTaskPrincipal -UserID $accountId -LogonType Interactive -RunLevel Highest
       Set-ScheduledTask -TaskPath '\Microsoft\Windows\PowerShell\ScheduledJobs' -TaskName $Config.AutoUpdateJobName -Principal $TaskPrincipal | Out-Null
     }
+  }
+  else if (-not $Config.AutoUpdateEnabled)
+  {
+    # If the config disables auto-update but we're currently running an auto-update, use another task to unschedule this in the future
+    $RemoveScheduledJobTrigger = New-JobTrigger -Once -At (get-date).AddSeconds(10)
+    $JobOptions = New-ScheduledJobOption -StartIfOnBattery -RunElevated
+    $Script = @"
+      `$Task = Get-ScheduledJob -Name '$($Config.AutoUpdateJobName)' -ErrorAction SilentlyContinue
+      if (`$null -ne `$Task)
+      {
+        Unregister-ScheduledJob `$Task -Confirm:`$False
+      }
+"@
+    Register-ScheduledJob -Name "Remove$($Config.AutoUpdateJobName)" -Trigger $RemoveScheduledJobTrigger -ScheduledJobOption $JobOptions -ScriptBlock [scriptblock]::Create($Script) | Out-Null
+    
+    # this script must not be running when the removal task executes
+    return
   }
 
 
