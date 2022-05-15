@@ -1,6 +1,6 @@
 {
   "AutomatedLab": {
     "SourcesFolderDrive": "C"
-  }
+  },
   "AutoUpdateJobName": "UpdateSwissChocolateyAtStartup"
 }
