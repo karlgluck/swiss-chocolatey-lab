@@ -167,7 +167,7 @@ function Update-SwissHost {
       }
     }
   $Zip.Dispose()
-  Install-Module SwissChocolatey -Force
+  Import-Module SwissChocolatey -Force
   
 
 
@@ -178,12 +178,15 @@ function Update-SwissHost {
   $AutoUpdateTrigger = New-JobTrigger -AtStartup
   $JobOptions = New-ScheduledJobOption -StartIfOnBattery -RunElevated
   $Task = Get-ScheduledJob -Name $Config.AutoUpdateJobName -ErrorAction SilentlyContinue
-  if ($Task -ne $null) { Unregister-ScheduledJob $Task -Confirm:$False }
+  if ($Task -ne $null)
+  {
+    Unregister-ScheduledJob $Task -Confirm:$False
+  }
   if ($Config.AutoUpdateEnabled)
   {
-    Register-ScheduledJob -Name $Config.AutoUpdateJobName -Trigger $AutoUpdateTrigger -ScheduledJobOption $JobOptions -ScriptBlock { Update-SwissHost -AtStartup }
+    Register-ScheduledJob -Name $Config.AutoUpdateJobName -Trigger $AutoUpdateTrigger -ScheduledJobOption $JobOptions -ScriptBlock { Update-SwissHost -AtStartup } | Out-Null
     $TaskPrincipal = New-ScheduledTaskPrincipal -UserID $accountId -LogonType ServiceAccount -RunLevel Highest
-    Set-ScheduledTask -TaskPath '\Microsoft\Windows\PowerShell\ScheduledJobs' -TaskName $Config.AutoUpdateJobName -Principal $TaskPrincipal
+    Set-ScheduledTask -TaskPath '\Microsoft\Windows\PowerShell\ScheduledJobs' -TaskName $Config.AutoUpdateJobName -Principal $TaskPrincipal | Out-Null
   }
 
 
