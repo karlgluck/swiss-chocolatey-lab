@@ -25,8 +25,9 @@ function Expand-ZipFileDirectory
         $Match = [RegEx]::Match($_.FullName, $DirectoryRegex)
         if ($Match.Success)
         {
-          $OutputFilePath = Join-Path $ModulesFolder $Match.Groups[1].Value
+          $OutputFilePath = Join-Path $OutputPath $Match.Groups[1].Value
           $OutputDirectoryPath = Split-Path -Parent $OutputFilePath
+          Write-Host " > Extracting $($_.FullName)"
           if (-not (Test-Path $OutputDirectoryPath)) { New-Item $OutputDirectoryPath -ItemType Directory | Out-Null }
           [System.IO.Compression.ZipFileExtensions]::ExtractToFile($_, $OutputFilePath, $true) | Out-Null
         }
