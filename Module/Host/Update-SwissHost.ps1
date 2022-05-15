@@ -193,7 +193,7 @@ function Update-SwissHost {
       Set-ScheduledTask -TaskPath '\Microsoft\Windows\PowerShell\ScheduledJobs' -TaskName $Config.AutoUpdateJobName -Principal $TaskPrincipal | Out-Null
     }
   }
-  else if (-not $Config.AutoUpdateEnabled)
+  elseif (-not $Config.AutoUpdateEnabled)
   {
     # If the config disables auto-update but we're currently running an auto-update, use another task to unschedule this in the future
     $RemoveScheduledJobName = "Remove$($Config.AutoUpdateJobName)"
