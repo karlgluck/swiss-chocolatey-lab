@@ -16,7 +16,7 @@ function New-SwissVM {
   )
 
   # Clean up the VM name
-  if(-not($PSBoundParameters.ContainsKey('VMName')))
+  if (-not($PSBoundParameters.ContainsKey('VMName')))
   {
     $VMName = $Repository -replace '[^a-zA-Z0-9-]',''
   }
@@ -67,6 +67,10 @@ function New-SwissVM {
   catch
   {
     Write-Host -ForegroundColor Red "Missing configuration file: $GuestSpecificConfigUrl"
+    if (-not($PSBoundParameters.ContainsKey('Branch')))
+    {
+      Write-Host -ForegroundColor Yellow "-Branch defaults to '$Branch', is that what you expected?"
+    }
     return
   }
   finally
