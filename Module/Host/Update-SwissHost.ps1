@@ -207,7 +207,7 @@ function Update-SwissHost {
       }
       Unregister-ScheduledJob `$RemoveScheduledJobName -Confirm:`$False
 "@
-    Register-ScheduledJob -Name $RemoveScheduledJobName -Trigger $RemoveScheduledJobTrigger -ScheduledJobOption $JobOptions -ScriptBlock [scriptblock]::Create($Script) | Out-Null
+    Register-ScheduledJob -Name $RemoveScheduledJobName -Trigger $RemoveScheduledJobTrigger -ScheduledJobOption $JobOptions -ScriptBlock ([scriptblock]::Create($Script))
     
     # this script must not be running when the removal task executes
     return
