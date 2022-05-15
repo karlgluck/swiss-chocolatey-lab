@@ -9,23 +9,66 @@
 function Update-SwissHost {
   [CmdletBinding()]
   Param (
+    #[PSCustomObject]$Bootstrap, ??
     $Bootstrap,
     [Switch]$AtStartup
   )
 
-  # Local Variables
-  $Config = @{}
+  # Initialize the config with whatever already exists
   $ConfigPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) ".swisshost"
-
-  # Preamble
-  if ($null -ne $Bootstrap)
+  if (Test-Path $ConfigPath)
   {
-    Write-Host "Bootstrapping '${env:ComputerName}'"
+    Write-Host "Loading host config from $ConfigPath"
+    $Config = Get-Content $ConfigPath | ConvertFrom-Json
   }
   else
   {
-
+    Write-Host "No existing host configuration found at $ConfigPath"
+    $Config = [PSCustomObject]@{}
   }
+
+  # Get the repository's configuration file
+  if ($null -ne $Bootstrap)
+  {
+    Write-Host "Bootstrapping '${env:ComputerName}'"
+
+    # Save the access token
+    Add-Member -Name 'Token' -Value $Bootstrap['Token'] -Force -InputObject $Config -MemberType NoteProperty
+
+    # Parse repository configuration from the URL
+    $Match = [RegEx]::Match($Bootstrap['Url'], 'githubusercontent\.com\/([^\/]+)\/([^\/]+)\/(\S+)\/Module\/Host\/Update-SwissHost.ps1')
+    if ($Match.Success)
+    {
+      Add-Member -Name 'Username' -Value $Match.Groups[1].Value -Force -InputObject $Config -MemberType NoteProperty
+      Add-Member -Name 'Repository' -Value $Match.Groups[2].Value -Force -InputObject $Config -MemberType NoteProperty
+      Add-Member -Name 'Branch' -Value $Match.Groups[3].Value -Force -InputObject $Config -MemberType NoteProperty
+      Add-Member -Name 'RawUrl' -Value "https://raw.githubusercontent.com/$($Config.UserName)/$($Config.Repository)/$($Config.Branch)" -Force -InputObject $Config -MemberType NoteProperty
+      Add-Member -Name 'ZipUrl' -Value "https://github.com/$($Config.UserName)/$($Config.Repository)/archive/refs/heads/$($Config.Branch).zip" -Force -InputObject $Config -MemberType NoteProperty
+    }
+    else
+    {
+      Write-Host -ForegroundColor Red ">>>> Bootstrapping URL doesn't match expected format (see README.md) <<<<"
+      return
+    }
+
+    # Prevent accidental use of the Bootstrap variable later in the script
+    Remove-Variable -Name 'Bootstrap'
+  }
+  else
+  {
+    # Expect a config file to exist, otherwise we can't know what to do
+    if (-not (Test-Path $ConfigPath))
+    {
+      Write-Host -ForegroundColor Red ">>>> FATAL: Missing config file. Try bootstrapping again? (see README.md) <<<<"
+      Write-Host -ForegroundColor Red "Expected: $ConfigPath"
+      return
+    }
+  }
+
+  # Now that we have the config, define the rest of the local variables
+  $GenericConfigUrl = "$($Config.RawUrl)/Config/.swisshost"
+  $HostSpecificConfigUrl = "$($Config.RawUrl)/Config/${env:ComputerName}.swisshost"
+  $Headers = @{Authorization=@('token ',$Config.Token) -join ''; 'Cache-Control'='no-cache'}
 
   # Require Administrator privileges
   if (-not (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)))
@@ -34,94 +77,19 @@ function Update-SwissHost {
     return
   }
 
-  # Require Hyper-V
-  try
-  {
-    $previousErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Stop'
-
-    # Action: Install Hyper-V and CLI components (requires restart)
-    if (((Get-WindowsOptionalFeature -Online -FeatureName *hyper-v*all*) | % { $_.State }) -contains "Disabled")
-    {
-      Write-Host "Installing Hyper-V..."
-      Get-WindowsOptionalFeature -Online -FeatureName *hyper-v*all | Enable-WindowsOptionalFeature -Online
-      return
-    }
-
-    Write-Host "Hyper-V is installed"
-  }
-  catch
-  {
-    Write-Host -ForegroundColor Red ">>>> Must be run on a Windows version that supports Hyper-V <<<<"
-    return
-  }
-  finally
-  {
-    $ErrorActionPreference = $previousErrorActionPreference
-  }
-
-  # Initialize the config with whatever already exists
-  if (Test-Path $ConfigPath)
-  {
-    Write-Host "Loading host config from $ConfigPath"
-    (Get-Content $ConfigPath | ConvertFrom-Json).PSObject.Properties | ForEach-Object { $Config[$_.Name]= $_.Value }
-  }
-
-  # Get the repository's configuration file
-  if ($null -ne $Bootstrap)
-  {
-    # Save the access token
-    $Config['token'] = $Bootstrap['Token']
-
-    # Parse repository configuration from the URL
-    $Match = [RegEx]::Match($Bootstrap['Url'], '[.]com\/([^\/]+)\/([^\/]+)\/(\S+)\/Module\/Host\/Update-SwissHost.ps1')
-    if ($Match.Success)
-    {
-      $Config['username'] = $Match.Groups[1].Value
-      $Config['repository'] = $Match.Groups[2].Value
-      $Config['branch'] = $Match.Groups[3].Value
-      $Config['raw_url'] = "https://raw.githubusercontent.com/$($Config['username'])/$($Config['repository'])/$($Config['branch'])"
-      $Config['zip_url'] = "https://github.com/$($Config['username'])/$($Config['repository'])/archive/refs/heads/$($Config['branch']).zip"
-    }
-    else
-    {
-      Write-Host -ForegroundColor Red ">>>> Bootstrapping URL doesn't match expected format (see README.md) <<<<"
-      return
-    }
-  }
-  else
-  {
-    # Expect a config file to exist, otherwise we can't know what to do
-    if (-not (Test-Path $ConfigPath))
-    {
-      Write-Host -ForegroundColor Red ">>>> FATAL: Missing config file. Try bootstrapping again? <<<<"
-      Write-Host -ForegroundColor Red "Expected: $ConfigPath"
-      return
-    }
-  }
-
-  # More local variables
-  $GenericConfigUrl = "$($Config['raw_url'])/Config/.swisshost"
-  $HostSpecificConfigUrl = "$($Config['raw_url'])/Config/${env:ComputerName}.swisshost"
-  $Headers = @{Authorization=@('token ',$Config['Token']) -join ''; 'Cache-Control'='no-cache'}
-
-  #Invoke-WebRequest -Method Get -Uri $HostSpecificConfigUrl -Headers $Headers
-  #Invoke-WebRequest -Method Get -Uri $GenericConfigUrl -Headers $Headers
-
-
   # Grab the configuration from the repository and merge it into $Config
   $RemoteConfig = @{}
   try
   {
     $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $HostSpecificConfigUrl -Headers $Headers).Content | ConvertFrom-Json
-    Write-Host "Found a config for this host: $HostSpecificConfigUrl"
+    Write-Host "Using host-specific config: $HostSpecificConfigUrl"
   }
   catch
   {
     try
     {
-      $RemoteConfig = Invoke-WebRequest -Method Get -Uri $GenericConfigUrl -Headers $Headers
-      Write-Host "Applying generic host config: $GenericConfigUrl"
+      $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $GenericConfigUrl -Headers $Headers).Content | ConvertFrom-Json
+      Write-Host "Using generic host config: $GenericConfigUrl"
     }
     catch
     {
@@ -137,7 +105,7 @@ function Update-SwissHost {
     if (Test-Path 'variable:RemoteConfig')
     {
       # Move properties into Config
-      $RemoteConfig.PSObject.Properties | ForEach-Object { $Config[$_.Name] = $Config[$_.Value] }
+      $RemoteConfig.PSObject.Members | Where-Object { $_.MemberType -eq "NoteProperty" } | ForEach-Object { Add-Member -Name $_.Name -Value $_.Value -Force -InputObject $Config -MemberType NoteProperty }
     }
     Remove-Variable -Name RemoteConfig
   }
@@ -145,5 +113,33 @@ function Update-SwissHost {
   # Write the host configuration file
   ConvertTo-Json $Config | Out-File -FilePath $ConfigPath
 
+  # Require Hyper-V
+  try
+  {
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Stop'
+
+    # Action: Install Hyper-V and CLI components (requires restart)
+    if (((Get-WindowsOptionalFeature -Online -FeatureName *hyper-v*all*) | % { $_.State }) -contains "Disabled")
+    {
+      Write-Host "Installing Hyper-V..."
+      Get-WindowsOptionalFeature -Online -FeatureName *hyper-v*all | Enable-WindowsOptionalFeature -Online
+      Write-Host "Restarting (run the script again)..."
+      Restart-Computer -Delay 5
+      return
+    }
+
+    Write-Host "Hyper-V is installed"
+  }
+  catch
+  {
+    Write-Host -ForegroundColor Red ">>>> Must be run on a Windows version that supports Hyper-V <<<<"
+    return
+  }
+  finally
+  {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
 
 }
+
