@@ -3,8 +3,8 @@
 #>
 
 # debug sentinel so that we know this script ran
-Get-Date | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("Desktop")) "LastRanBootstrap.txt")
-
+"$(Get-Date): Hi Ladybug!" | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("Desktop")) "LastRanBootstrap.txt")
+Get-ChildItem -Path $MyInvocation.MyCommand.Path | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("Desktop")) "Test.txt")
 
 
 # Load the guest config file
