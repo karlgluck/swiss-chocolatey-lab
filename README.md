@@ -43,7 +43,7 @@ New-SwissVM <repository>
 New-SwissVM -Repository <repository> -Branch <branch> -VMName <name>
 ```
 
-By default, `Add-SwissVM` reads from the `main` branch and will create a VM with the same name as the repository.
+By default, `Add-SwissVM` reads from the `main` branch and will create a VM with the same name as the repository. Login credentials will be your GitHub username with the name of the repository as a password.
 
 After creation, launch the VM on the host:
 
