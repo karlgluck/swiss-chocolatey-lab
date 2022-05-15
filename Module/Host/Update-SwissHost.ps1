@@ -196,6 +196,7 @@ function Update-SwissHost {
   else if (-not $Config.AutoUpdateEnabled)
   {
     # If the config disables auto-update but we're currently running an auto-update, use another task to unschedule this in the future
+    $RemoveScheduledJobName = "Remove$($Config.AutoUpdateJobName)"
     $RemoveScheduledJobTrigger = New-JobTrigger -Once -At (get-date).AddSeconds(10)
     $JobOptions = New-ScheduledJobOption -StartIfOnBattery -RunElevated
     $Script = @"
@@ -204,8 +205,9 @@ function Update-SwissHost {
       {
         Unregister-ScheduledJob `$Task -Confirm:`$False
       }
+      Unregister-ScheduledJob `$RemoveScheduledJobName -Confirm:`$False
 "@
-    Register-ScheduledJob -Name "Remove$($Config.AutoUpdateJobName)" -Trigger $RemoveScheduledJobTrigger -ScheduledJobOption $JobOptions -ScriptBlock [scriptblock]::Create($Script) | Out-Null
+    Register-ScheduledJob -Name $RemoveScheduledJobName -Trigger $RemoveScheduledJobTrigger -ScheduledJobOption $JobOptions -ScriptBlock [scriptblock]::Create($Script) | Out-Null
     
     # this script must not be running when the removal task executes
     return
@@ -286,4 +288,3 @@ function Update-SwissHost {
   #
 
 }
-
