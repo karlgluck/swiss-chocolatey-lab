@@ -10,13 +10,8 @@ function Update-SwissHost {
   [CmdletBinding()]
   Param (
     [PSCustomObject]$Bootstrap,
-    [Switch]$AtStartup
+    [Switch]$Scheduled
   )
-
-
-
-  # sentinel so that we know this was run at startup
-  Get-Date | Out-File -FilePath "C:\LastRanUpdateSwissHost.txt"
 
 
 
@@ -179,8 +174,7 @@ function Update-SwissHost {
 
   # Make sure that Update-Swisshost function gets called at startup
   # https://stackoverflow.com/questions/40569045/register-scheduledjob-as-the-system-account-without-having-to-pass-in-credentia
-  # Output: %LOCALAPPDATA%\Microsoft\Windows\PowerShell\ScheduledJobs\UpdateSwissChocolateyAtStartup
-  #$accountId = "NT AUTHORITY\SYSTEM"
+  # Output: %LOCALAPPDATA%\Microsoft\Windows\PowerShell\ScheduledJobs\$JobName
   $accountId = ((Get-WMIObject -class Win32_ComputerSystem | Select-Object -ExpandProperty username)) 
   $AutoUpdateTrigger = New-JobTrigger -AtLogOn
   $JobOptions = New-ScheduledJobOption -StartIfOnBattery -RunElevated
@@ -191,7 +185,7 @@ function Update-SwissHost {
   }
   if ($Config.AutoUpdateEnabled)
   {
-    Register-ScheduledJob -Name $Config.AutoUpdateJobName -Trigger $AutoUpdateTrigger -ScheduledJobOption $JobOptions -ScriptBlock { Set-ExecutionPolicy Bypass -Scope Process -Force ; Update-SwissHost -AtStartup } | Out-Null
+    Register-ScheduledJob -Name $Config.AutoUpdateJobName -Trigger $AutoUpdateTrigger -ScheduledJobOption $JobOptions -ScriptBlock { Import-Module "SwissChocolateyLab" ; Update-SwissHost -Scheduled } | Out-Null
     $TaskPrincipal = New-ScheduledTaskPrincipal -UserID $accountId -LogonType Interactive -RunLevel Highest
     Set-ScheduledTask -TaskPath '\Microsoft\Windows\PowerShell\ScheduledJobs' -TaskName $Config.AutoUpdateJobName -Principal $TaskPrincipal | Out-Null
   }
