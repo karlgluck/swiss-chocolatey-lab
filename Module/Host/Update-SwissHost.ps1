@@ -16,7 +16,7 @@ function Update-SwissHost {
 
 
   # sentinel so that we know this was run at startup
-  Get-Date | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("Desktop")) "LastRanUpdateSwissHost.txt")
+  Get-Date | Out-File -FilePath "C:\Users\TREEHOUSE\Desktop\LastRanUpdateSwissHost.txt")
 
 
 
