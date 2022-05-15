@@ -40,6 +40,10 @@ function New-SwissVM {
 
   # Get the config for the target project
   $GuestConfig = [PSCustomObject]@{
+    SwissChocolateyLab=[PSCustomObject]@{
+      Repository=$HostConfig.Repository
+      Branch=$HostConfig.Branch
+    }
     Repository=$Repository
     Branch=$Branch
     UserName=$HostConfig.UserName
