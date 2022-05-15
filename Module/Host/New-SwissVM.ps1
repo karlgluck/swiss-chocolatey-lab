@@ -37,7 +37,7 @@ function New-SwissVM {
   }
 
   # Get the config for the target project at the moment
-  $GuestConfig = [PSCustomObject]@{Repository=$Repository; Branch=$Branch; UserName=$HostConfig.UserName; Token=$HostConfig.Token}
+  $GuestConfig = [PSCustomObject]@{Repository=$Repository; Branch=$Branch; UserName=$HostConfig.UserName; Token=$HostConfig.Token; SwissZipUrl=$HostConfig.ZipUrl}
   $Headers = @{Authorization=('token ' + $GuestConfig.Token); 'Cache-Control'='no-store'}
   $GuestSpecificConfigUrl = "https://raw.githubusercontent.com/$($GuestConfig.UserName)/$($GuestConfig.Repository)/$($GuestConfig.Branch)/.swiss/config.json"
   try
@@ -108,6 +108,7 @@ function New-SwissVM {
   Add-LabMachineDefinition -Name $VMName -Memory $MemoryInBytes -Network $VirtualNetworkName -OperatingSystem $GuestConfig.OperatingSystem.Version -PostInstallationActivity $postInstallActivity -ToolsPath "$labSources\Tools" -ToolsPathDestination 'C:\Tools'
   Install-Lab
   $GuestConfig | ConvertTo-Json | Out-File -FilePath $tempSwissGuestPath
+  Write-Host "Wrote $tempSwissGuestPath"
   Copy-LabFileItem -Path $tempSwissGuestPath -ComputerName $VMName -DestinationFolderPath "C:\Users\$($HostConfig.Username)\Documents"
   #Invoke-LabCommand -ActivityName 'ConfigureSwiss' -ComputerName $VMName -Variable HostConfig,GuestConfig -UseLocalCredential -Retries 3 -RetryIntervalInSeconds 20 `
   #  -ScriptBlock {$GuestConfig | ConvertTo-Json | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("MyDocuments")) ".swissguest")}}
