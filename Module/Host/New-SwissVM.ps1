@@ -95,19 +95,22 @@ function New-SwissVM {
   # Create a new lab that is connected to the internet
   # https://github.com/AutomatedLab/AutomatedLab/blob/develop/LabSources/SampleScripts/Introduction/05%20Single%20domain-joined%20server%20(internet%20facing).ps1
   # https://devblogs.microsoft.com/scripting/automatedlab-tutorial-part-2-create-a-simple-lab/
-  $LabName = "$($VMName)Lab"
-  $VirtualNetworkName = "$($VMName)Net"
-  $postInstallationActivityPath = Join-Path $labSources 'PostInstallationActivity'
-  $postInstallActivity = ($HostConfig.PostInstallationActivities + $GuestConfig.PostInstallationActivities) | ForEach-Object { Get-LabPostInstallationActivity -ScriptFileName $_.ScriptFileName -DependencyFolder (Join-Path $postInstallationActivityPath $_.DependencyFolderName) }
-
+  # https://automatedlab.org/en/latest/PSFileTransfer/en-us/Copy-LabFileItem/
+  $LabName = "$($VMName)SwissLab"
+  $VirtualNetworkName = "$($VMName)SwissNet"
+  $postInstallationActivitiesPath = Join-Path $labSources 'PostInstallationActivities'
+  $postInstallActivity = ($HostConfig.PostInstallationActivities + $GuestConfig.PostInstallationActivities) | ForEach-Object { Get-LabPostInstallationActivity -ScriptFileName $_.ScriptFileName -DependencyFolder (Join-Path $postInstallationActivitiesPath $_.DependencyFolderName) }
+  $tempSwissGuestPath = Join-Path ([System.IO.Path]::GetTempPath()) ".swissguest"
   New-LabDefinition -Name $LabName -DefaultVirtualizationEngine HyperV
   Add-LabVirtualNetworkDefinition -Name $VirtualNetworkName -VirtualizationEngine HyperV -HyperVProperties @{SwitchType = 'External'; AdapterName = 'Ethernet'}
   Set-LabInstallationCredential -Username $HostConfig.Username -Password $Repository
   $MemoryInBytes = (Invoke-Expression $GuestConfig.VirtualMachine.Memory)
   Add-LabMachineDefinition -Name $VMName -Memory $MemoryInBytes -Network $VirtualNetworkName -OperatingSystem $GuestConfig.OperatingSystem.Version -PostInstallationActivity $postInstallActivity -ToolsPath "$labSources\Tools" -ToolsPathDestination 'C:\Tools'
   Install-Lab
-  Invoke-LabCommand -ActivityName 'ConfigureSwiss' -ComputerName $VMName -Variable HostConfig,GuestConfig -UseLocalCredential -Retries 3 -RetryIntervalInSeconds 20 `
-    -ScriptBlock {$GuestConfig | ConvertTo-Json | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("MyDocuments")) ".swissguest")}
+  $GuestConfig | ConvertTo-Json | Out-File -FilePath $tempSwissGuestPath
+  Copy-LabFileItem -Path $tempSwissGuestPath -ComputerName $VMName -DestinationFolderPath "C:\Users\$($HostConfig.Username)\Documents"
+  #Invoke-LabCommand -ActivityName 'ConfigureSwiss' -ComputerName $VMName -Variable HostConfig,GuestConfig -UseLocalCredential -Retries 3 -RetryIntervalInSeconds 20 `
+  #  -ScriptBlock {$GuestConfig | ConvertTo-Json | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("MyDocuments")) ".swissguest")}}
   Show-LabDeploymentSummary -Detailed
 
   
