@@ -63,6 +63,7 @@ function Update-SwissHost {
   # Initialize the config with whatever already exists
   if (Test-Path $ConfigPath)
   {
+    Write-Host "Loading host config from $ConfigPath"
     (Get-Content $ConfigPath | ConvertFrom-Json).PSObject.Properties | ForEach-Object { $Config[$_.Name]= $_.Value }
   }
 
@@ -84,7 +85,7 @@ function Update-SwissHost {
     }
     else
     {
-      Write-Host -ForegroundColor Red ">>>> URL doesn't match expected format (see README.md) <<<<"
+      Write-Host -ForegroundColor Red ">>>> Bootstrapping URL doesn't match expected format (see README.md) <<<<"
       return
     }
   }
@@ -104,9 +105,42 @@ function Update-SwissHost {
   $HostSpecificConfigUrl = "$($Config['raw_url'])/Config/${env:ComputerName}.swisshost"
   $Headers = @{Authorization=@('token ',$Config['Token']) -join ''; 'Cache-Control'='no-cache'}
 
-  # Grab the configuration from the repository and merge it into $Config
   #Invoke-WebRequest -Method Get -Uri $HostSpecificConfigUrl -Headers $Headers
   #Invoke-WebRequest -Method Get -Uri $GenericConfigUrl -Headers $Headers
+
+
+  # Grab the configuration from the repository and merge it into $Config
+  $RemoteConfig = @{}
+  try
+  {
+    $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $HostSpecificConfigUrl -Headers $Headers).Content | ConvertFrom-Json
+    Write-Host "Found a config for this host: $HostSpecificConfigUrl"
+  }
+  catch
+  {
+    try
+    {
+      $RemoteConfig = Invoke-WebRequest -Method Get -Uri $GenericConfigUrl -Headers $Headers
+      Write-Host "Applying generic host config: $GenericConfigUrl"
+    }
+    catch
+    {
+      Write-Host -ForegroundColor Red ">>>> Missing both default and host-specific config files in repository <<<<"
+      Write-Host -ForegroundColor Red "Expected either:"
+      Write-Host -ForegroundColor Red " * $GenericConfigUrl"
+      Write-Host -ForegroundColor Red " * $HostSpecificConfigUrl"
+      return;
+    }
+  }
+  finally
+  {
+    if (Test-Path 'variable:RemoteConfig')
+    {
+      # Move properties into Config
+      $RemoteConfig.PSObject.Properties | ForEach-Object { $Config[$_.Name] = $Config[$_.Value] }
+    }
+    Remove-Variable -Name RemoteConfig
+  }
 
   # Write the host configuration file
   ConvertTo-Json $Config | Out-File -FilePath $ConfigPath
