@@ -3,7 +3,7 @@
     "SourcesFolderDrive": "C"
   },
   "AutoUpdateJobName": "UpdateSwissChocolateyAtLogOn",
-  "AutoUpdateEnabled": true,
+  "AutoUpdateEnabled": false,
   "FidoScriptUrl": "https://raw.githubusercontent.com/pbatard/Fido/master/Fido.ps1",
   "PostInstallationActivities": [
       {"ScriptFileName":"Install-Chocolatey.ps1", "DependencyFolderName":"SwissChocolatey"}
