@@ -172,7 +172,7 @@ function Update-SwissHost {
       }
     }
   $Zip.Dispose()
-  Import-Module SwissChocolatey -Force
+  Import-Module SwissChocolateyLab -Force
 
 
   # Make sure that Update-Swisshost function gets called at startup
