@@ -84,6 +84,7 @@ function Update-SwissHost {
 
 
 
+
   # Require Administrator privileges
   if (-not (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)))
   {
@@ -150,7 +151,7 @@ function Update-SwissHost {
   # Install /Module/** as a PowerShell module
   # https://community.idera.com/database-tools/powershell/powertips/b/tips/posts/extract-specific-files-from-zip-archive
   Write-Host "Install <repo>/Module/** as a PowerShell module into $ModulesFolder"
-  if (-not (Test-Path $ModulesFolder)) { New-Item $ModulesFolder -ItemType Directory | Out-Null }
+  if (Test-Path $ModulesFolder) { Remove-Item -Recurse -Force $ModulesFolder }
   Add-Type -AssemblyName System.IO.Compression.FileSystem
   $Zip = [System.IO.Compression.ZipFile]::OpenRead($TempRepositoryZipPath)
   $Zip.Entries | 
@@ -237,7 +238,7 @@ function Update-SwissHost {
 
 
 
-  
+
   # Install AutomatedLab to manage Hyper-V
   # https://www.verboon.info/2021/08/deploying-windows-11-in-minutes-with-automatedlab/
   Write-Host "Setting up AutomatedLab..."
@@ -245,5 +246,23 @@ function Update-SwissHost {
   Install-Module AutomatedLab -AllowClobber
   $LabSourcesFolder = New-LabSourcesFolder -Drive $Config.AutomatedLab.SourcesFolderDrive
   Write-Host "AutomatedLab ready in $LabSourcesFolder"
+  $ToolsPath = Join-Path $LabSourcesFolder "Tools/SwissChocolatey"
+  $PostInstallationActivitiesPath = Join-Path $LabSourcesFolder "PostInstallationActivities/SwissChocolatey"
+
+
+
+  # Extract tools and post installation activities usable by installed VM's
+  Write-Host "Extract <repo>/Tools/** --> $ToolsPath"
+  if (Test-Path $ToolsPath) { Remove-Item -Recurse -Force $ToolsPath }
+  Expand-ZipFileDirectory -ZipFilePath $TempRepositoryZipPath -DirectoryInZipFile "Tools" -OutputPath $ToolsPath
+  Write-Host "Extract <repo>/PostInstallationActivities/** --> $PostInstallationActivitiesPath"
+  if (Test-Path $PostInstallationActivitiesPath) { Remove-Item -Recurse $PostInstallationActivitiesPath }
+  Expand-ZipFileDirectory -ZipFilePath $TempRepositoryZipPath -DirectoryInZipFile "PostInstallationActivities" -OutputPath $PostInstallationActivitiesPath
+
+
+  # 
+  # now, we're ready to New-SwissVM
+  #
+
 }
 
