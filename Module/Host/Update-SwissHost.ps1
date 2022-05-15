@@ -129,7 +129,7 @@ function Update-SwissHost {
   # Write the host configuration file
   ConvertTo-Json $Config | Out-File -FilePath $ConfigPath
 
-
+  Write-Host -ForegroundColor Blue "AutoUpdateEnabled = $($Config.AutoUpdateEnabled)"
 
 
   # Download the entire repository
