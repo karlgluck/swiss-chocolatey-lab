@@ -172,7 +172,7 @@ function Update-SwissHost {
   Import-Module SwissChocolateyLab -Force
 
 
-  # Make sure that Update-Swisshost function gets called at startup
+  # Make sure that Update-Swisshost function gets called when this user logs in
   # https://stackoverflow.com/questions/40569045/register-scheduledjob-as-the-system-account-without-having-to-pass-in-credentia
   # tasks vs. jobs: https://devblogs.microsoft.com/scripting/using-scheduled-tasks-and-scheduled-jobs-in-powershell/
   # Output: %LOCALAPPDATA%\Microsoft\Windows\PowerShell\ScheduledJobs\$JobName
@@ -205,7 +205,7 @@ function Update-SwissHost {
       {
         Unregister-ScheduledJob `$Task -Confirm:`$False
       }
-      Unregister-ScheduledJob `$RemoveScheduledJobName -Confirm:`$False
+      Unregister-ScheduledJob '$RemoveScheduledJobName' -Confirm:`$False
 "@
     Register-ScheduledJob -Name $RemoveScheduledJobName -Trigger $RemoveScheduledJobTrigger -ScheduledJobOption $JobOptions -ScriptBlock ([scriptblock]::Create($Script))
     
