@@ -3,5 +3,6 @@
     "SourcesFolderDrive": "C"
   },
   "AutoUpdateJobName": "UpdateSwissChocolateyAtStartup",
-  "AutoUpdateEnabled": true
+  "AutoUpdateEnabled": true,
+  "FidoScriptUrl": "https://raw.githubusercontent.com/pbatard/Fido/master/Fido.ps1"
 }
