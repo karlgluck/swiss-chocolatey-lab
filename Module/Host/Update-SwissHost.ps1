@@ -9,8 +9,7 @@
 function Update-SwissHost {
   [CmdletBinding()]
   Param (
-    #[PSCustomObject]$Bootstrap, ??
-    $Bootstrap,
+    [PSCustomObject]$Bootstrap,
     [Switch]$AtStartup
   )
 
@@ -33,10 +32,10 @@ function Update-SwissHost {
     Write-Host "Bootstrapping '${env:ComputerName}'"
 
     # Save the access token
-    Add-Member -Name 'Token' -Value $Bootstrap['Token'] -Force -InputObject $Config -MemberType NoteProperty
+    Add-Member -Name 'Token' -Value $Bootstrap.Token -Force -InputObject $Config -MemberType NoteProperty
 
     # Parse repository configuration from the URL
-    $Match = [RegEx]::Match($Bootstrap['Url'], 'githubusercontent\.com\/([^\/]+)\/([^\/]+)\/(\S+)\/Module\/Host\/Update-SwissHost.ps1')
+    $Match = [RegEx]::Match($Bootstrap.Url, 'githubusercontent\.com\/([^\/]+)\/([^\/]+)\/(\S+)\/Module\/Host\/Update-SwissHost.ps1')
     if ($Match.Success)
     {
       Add-Member -Name 'Username' -Value $Match.Groups[1].Value -Force -InputObject $Config -MemberType NoteProperty
