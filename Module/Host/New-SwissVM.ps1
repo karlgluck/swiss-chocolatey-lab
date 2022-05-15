@@ -10,7 +10,9 @@ function New-SwissVM {
 
     [string]$Branch="main",
 
-    [string]$VMName
+    [string]$VMName,
+
+    [string]$UseCommonConfig
   )
 
   # Clean up the VM name
@@ -36,10 +38,27 @@ function New-SwissVM {
     return      
   }
 
-  # Get the config for the target project at the moment
-  $GuestConfig = [PSCustomObject]@{Repository=$Repository; Branch=$Branch; UserName=$HostConfig.UserName; Token=$HostConfig.Token; SwissZipUrl=$HostConfig.ZipUrl}
+  # Get the config for the target project
+  $GuestConfig = [PSCustomObject]@{
+    Repository=$Repository
+    Branch=$Branch
+    UserName=$HostConfig.UserName
+    Token=$HostConfig.Token
+    SwissZipUrl=$HostConfig.ZipUrl
+  }
+  Add-Member -Name 'RawUrl' -Value "https://raw.githubusercontent.com/$($GuestConfig.UserName)/$($GuestConfig.Repository)/$($GuestConfig.Branch)" -Force -InputObject $GuestConfig -MemberType NoteProperty
+  if ($PSBoundParameters.ContainsKey('UseCommonConfig'))
+  {
+    # Use a generic configuration from the main repository
+    $GuestSpecificConfigUrl = "$($HostConfig.RawUrl)/Config/$UseCommonConfig.swissguest"
+  }
+  else
+  {
+    # Use a specialized config in the guest repository
+    $GuestSpecificConfigUrl = "$($GuestConfig.RawUrl)/.swiss/config.json"
+  }
+
   $Headers = @{Authorization=('token ' + $GuestConfig.Token); 'Cache-Control'='no-store'}
-  $GuestSpecificConfigUrl = "https://raw.githubusercontent.com/$($GuestConfig.UserName)/$($GuestConfig.Repository)/$($GuestConfig.Branch)/.swiss/config.json"
   try
   {
     $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $GuestSpecificConfigUrl -Headers $Headers).Content | ConvertFrom-Json
@@ -96,8 +115,8 @@ function New-SwissVM {
   # https://github.com/AutomatedLab/AutomatedLab/blob/develop/LabSources/SampleScripts/Introduction/05%20Single%20domain-joined%20server%20(internet%20facing).ps1
   # https://devblogs.microsoft.com/scripting/automatedlab-tutorial-part-2-create-a-simple-lab/
   # https://automatedlab.org/en/latest/PSFileTransfer/en-us/Copy-LabFileItem/
-  $LabName = "$($VMName)SwissLab"
-  $VirtualNetworkName = "$($VMName)SwissNet"
+  $LabName = "$($VMName)SCLLab"
+  $VirtualNetworkName = "$($VMName)SCLNet"
   $postInstallationActivitiesPath = Join-Path $labSources 'PostInstallationActivities'
   $postInstallActivity = ($HostConfig.PostInstallationActivities + $GuestConfig.PostInstallationActivities) | ForEach-Object { Get-LabPostInstallationActivity -ScriptFileName $_.ScriptFileName -DependencyFolder (Join-Path $postInstallationActivitiesPath $_.DependencyFolderName) }
   $tempSwissGuestPath = Join-Path ([System.IO.Path]::GetTempPath()) ".swissguest"
@@ -110,11 +129,9 @@ function New-SwissVM {
   $GuestConfig | ConvertTo-Json | Out-File -FilePath $tempSwissGuestPath
   Write-Host "Wrote $tempSwissGuestPath"
   Copy-LabFileItem -Path $tempSwissGuestPath -ComputerName $VMName -DestinationFolderPath "C:\Users\$($HostConfig.Username)\Documents"
-  #Invoke-LabCommand -ActivityName 'ConfigureSwiss' -ComputerName $VMName -Variable HostConfig,GuestConfig -UseLocalCredential -Retries 3 -RetryIntervalInSeconds 20 `
-  #  -ScriptBlock {$GuestConfig | ConvertTo-Json | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("MyDocuments")) ".swissguest")}}
   Show-LabDeploymentSummary -Detailed
 
-  
+
   Write-Host "Finished installing lab; log in with Username=$($HostConfig.Username) and Password=$Repository"
 
 }
