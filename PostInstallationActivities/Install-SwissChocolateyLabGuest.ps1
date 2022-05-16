@@ -5,14 +5,10 @@
 
 # Somehow it seems like this is getting run before all the files are copied?
 "$(Get-Date)" | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("Desktop")) "LastRanBootstrap.txt")
-Get-ChildItem -Path $MyInvocation.MyCommand.Path | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("Desktop")) "Test.txt")
-Sleep 5
-Get-ChildItem -Path $MyInvocation.MyCommand.Path | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("Desktop")) "Test2.txt")
-Sleep 5
-Get-ChildItem -Path $MyInvocation.MyCommand.Path | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("Desktop")) "Test3.txt")
+Get-ChildItem -Path (Split-Path -Parent $MyInvocation.MyCommand.Path) | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("Desktop")) "Test.txt")
 
 # Extract the bootstrap PowerShellModule.zip into our installed modules path (Update-SwissGuest will overwrite this with latest)
-$PowerShellModuleZipPath = Join-Path $MyInvocation.MyCommand.Path 'PowerShellModule.zip'
+$PowerShellModuleZipPath = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) 'PowerShellModule.zip'
 if (-not (Test-Path $PowerShellModuleZipPath))
 {
   Write-Host -ForegroundColor Red "PowerShellModule.zip is missing. It should have been provided by the PostInstallationActivity at $PowerShellModuleZipPath"
