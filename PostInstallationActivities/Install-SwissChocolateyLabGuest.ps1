@@ -2,9 +2,23 @@
   This post-install script is run by AutomatedLab to bootstrap Swiss Chocolatey Lab in the guest VM
 #>
 
-# debug sentinel so that we know this script ran
-"$(Get-Date)" | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("Desktop")) "LastRanBootstrap.txt")
-Get-ChildItem -Path $MyInvocation.MyCommand.Path | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("Desktop")) "Test.txt")
+
+
+# Extract the bootstrap PowerShellModule.zip into our installed modules path (Update-SwissGuest will overwrite this with latest)
+$PowerShellModuleZipPath = Join-Path $MyInvocation.MyCommand.Path 'PowerShellModule.zip'
+if (-not (Test-Path $PowerShellModuleZipPath))
+{
+  Write-Host -ForegroundColor Red "PowerShellModule.zip is missing. It should have been provided by the PostInstallationActivity at $PowerShellModuleZipPath"
+  return;
+}
+Expand-Archive -Path $PowerShellModuleZipPath -DestinationPath ($env:PSModulePath -split ';')[0]
+Import-Module SwissChocolateyLab -Force
+
+# debug the module exports
+Get-Command -Module "SwissChocolateyLab" | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("Desktop")) "SCLModuleExports.txt")
+
+
+
 
 
 # Load the guest config file
@@ -22,8 +36,8 @@ else
 
 # Derived variables
 $Headers = @{Authorization=('token ' + $GuestConfig.Token); 'Cache-Control'='no-store'}
-#$TempZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($Config.Username)-$($Config.SwissChocolateyLab.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
-$ModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
+
+
 
 
 
@@ -41,7 +55,7 @@ $ModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab
 # Install Chocolatey
 $previousErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = 'Stop'
-shouldInstallChocolatey = $False
+$shouldInstallChocolatey = $False
 try
 {
   if (Get-Command "choco")
