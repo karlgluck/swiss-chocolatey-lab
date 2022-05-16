@@ -12,11 +12,15 @@ function New-SwissVM {
 
     [string]$VMName,
 
-    [string]$UseCommonConfig
+    [string]$UseCommonConfig,
+
+    [string]$UserName,
+
+    [string]$Token
   )
 
   # Clean up the VM name
-  if (-not($PSBoundParameters.ContainsKey('VMName')))
+  if (-not($PSBoundParameters.ContainsKey('VMName')) -or ($null -eq $VMName))
   {
     $VMName = $Repository -replace '[^a-zA-Z0-9-]',''
   }
@@ -38,17 +42,27 @@ function New-SwissVM {
     return      
   }
 
+
+
+  # Set the default UserName and Token using the host's config if they aren't provided
+  if (-not($PSBoundParameters.ContainsKey('UserName') -or ($null -eq $UserName)))
+  {
+    $UserName = $HostConfig.UserName
+  }
+  if (-not($PSBoundParameters.ContainsKey('Token') -or ($null -eq $Token)))
+  {
+    $Token = $HostConfig.Token
+  }
+
+
+
   # Get the config for the target project
   $GuestConfig = [PSCustomObject]@{
-    SwissChocolateyLab=[PSCustomObject]@{
-      Repository=$HostConfig.Repository
-      Branch=$HostConfig.Branch
-    }
+    HostConfig=$HostConfig
     Repository=$Repository
     Branch=$Branch
-    UserName=$HostConfig.UserName
-    Token=$HostConfig.Token
-    SwissZipUrl=$HostConfig.ZipUrl
+    UserName=$UserName
+    Token=$Token
   }
   Add-Member -Name 'RawUrl' -Value "https://raw.githubusercontent.com/$($GuestConfig.UserName)/$($GuestConfig.Repository)/$($GuestConfig.Branch)" -Force -InputObject $GuestConfig -MemberType NoteProperty
   if ($PSBoundParameters.ContainsKey('UseCommonConfig'))
@@ -62,10 +76,10 @@ function New-SwissVM {
     $GuestSpecificConfigUrl = "$($GuestConfig.RawUrl)/.swiss/config.json"
   }
 
-  $Headers = @{Authorization=('token ' + $GuestConfig.Token); 'Cache-Control'='no-store'}
+  $GuestHeaders = @{Authorization=('token ' + $GuestConfig.Token); 'Cache-Control'='no-store'}
   try
   {
-    $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $GuestSpecificConfigUrl -Headers $Headers).Content | ConvertFrom-Json
+    $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $GuestSpecificConfigUrl -Headers $GuestHeaders).Content | ConvertFrom-Json
     Write-Host "Read guest config from $GuestSpecificConfigUrl"
   }
   catch
@@ -157,7 +171,7 @@ function New-SwissVM {
   $tempSwissGuestPath = Join-Path ([System.IO.Path]::GetTempPath()) ".swissguest"
   New-LabDefinition -Name $LabName -DefaultVirtualizationEngine HyperV
   Add-LabVirtualNetworkDefinition -Name $VirtualNetworkName -VirtualizationEngine HyperV -HyperVProperties @{SwitchType = 'External'; AdapterName = 'Ethernet'}
-  Set-LabInstallationCredential -Username $HostConfig.Username -Password $Repository
+  Set-LabInstallationCredential -Username $GuestConfig.Username -Password $Repository
   $MemoryInBytes = (Invoke-Expression $GuestConfig.VirtualMachine.Memory)
   Add-LabMachineDefinition -Name $VMName -Memory $MemoryInBytes -Network $VirtualNetworkName -OperatingSystem $GuestConfig.OperatingSystem.Version -PostInstallationActivity $postInstallActivity -ToolsPath "$labSources\Tools" -ToolsPathDestination 'C:\Tools'
 
@@ -166,7 +180,7 @@ function New-SwissVM {
 
   # Move the .swissguest config into the VM
   $GuestConfig | ConvertTo-Json | Out-File -FilePath $tempSwissGuestPath
-  Copy-LabFileItem -Path $tempSwissGuestPath -ComputerName $VMName -DestinationFolderPath "C:\Users\$($HostConfig.Username)\Documents"
+  Copy-LabFileItem -Path $tempSwissGuestPath -ComputerName $VMName -DestinationFolderPath "C:\Users\$($GuestConfig.UserName)\Documents"
 
 
 
@@ -175,7 +189,7 @@ function New-SwissVM {
 
   # Display results to the user
   Show-LabDeploymentSummary -Detailed
-  Write-Host "Finished installing lab; log in with Username=$($HostConfig.Username) and Password=$Repository"
+  Write-Host "Finished installing lab; log in with Username=$($GuestConfig.UserName) and Password=$Repository"
 
 }
   
