@@ -3,6 +3,13 @@
 #>
 
 
+# Somehow it seems like this is getting run before all the files are copied?
+"$(Get-Date)" | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("Desktop")) "LastRanBootstrap.txt")
+Get-ChildItem -Path $MyInvocation.MyCommand.Path | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("Desktop")) "Test.txt")
+Sleep 5
+Get-ChildItem -Path $MyInvocation.MyCommand.Path | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("Desktop")) "Test2.txt")
+Sleep 5
+Get-ChildItem -Path $MyInvocation.MyCommand.Path | Out-File -FilePath (Join-Path ([Environment]::GetFolderPath("Desktop")) "Test3.txt")
 
 # Extract the bootstrap PowerShellModule.zip into our installed modules path (Update-SwissGuest will overwrite this with latest)
 $PowerShellModuleZipPath = Join-Path $MyInvocation.MyCommand.Path 'PowerShellModule.zip'

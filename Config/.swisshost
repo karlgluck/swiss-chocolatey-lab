@@ -6,6 +6,6 @@
   "AutoUpdateEnabled": true,
   "FidoScriptUrl": "https://raw.githubusercontent.com/pbatard/Fido/master/Fido.ps1",
   "PostInstallationActivities": [
-      {"ScriptFileName":"Install-SwissChocolateyLabGuest.ps1", "DependencyFolderName":"SwissChocolateyLab"}
+      {"ScriptFileName":"Install-SwissChocolateyLabGuest.ps1"}
   ]
 }

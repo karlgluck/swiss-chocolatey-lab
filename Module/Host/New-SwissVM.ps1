@@ -123,14 +123,14 @@ function New-SwissVM {
 
 
   # Use our installed SwissChocolateyLab PowerShell module to bootstrap the VM. We pass
-  # files into the VM via the PostInstallationActivities/SwissChocolateyLab folder.
+  # files into the VM via the PostInstallationActivities folder.
   $HostModuleFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
   if (-not (Test-Path $HostModuleFolder))
   {
     Write-Host -ForegroundColor Red "Missing host modules folder. Try Update-SwissHost? Expected: $HostModuleFolder"
     return
   }
-  Compress-Archive -Force -Path $HostModuleFolder -DestinationPath (Join-Path (Get-LabSourcesLocation) "PostInstallationActivities/SwissChocolateyLab/PowerShellModule.zip")
+  Compress-Archive -Force -Path $HostModuleFolder -DestinationPath (Join-Path (Get-LabSourcesLocation) "PostInstallationActivities/$($HostConfig.Repository)/PowerShellModule.zip")
 
 
 
@@ -143,7 +143,17 @@ function New-SwissVM {
   $LabName = "$($VMName)SCLLab"
   $VirtualNetworkName = "$($VMName)SCLNet"
   $postInstallationActivitiesPath = Join-Path $labSources 'PostInstallationActivities'
-  $postInstallActivity = ($HostConfig.PostInstallationActivities + $GuestConfig.PostInstallationActivities) | ForEach-Object { Get-LabPostInstallationActivity -KeepFolder -ScriptFileName $_.ScriptFileName -DependencyFolder (Join-Path $postInstallationActivitiesPath $_.DependencyFolderName) }
+  $postInstallActivity = ($HostConfig.PostInstallationActivities + $GuestConfig.PostInstallationActivities) | ForEach-Object {
+      if (Get-Member -InputObject $_ -Name "DependencyFolderName")
+      {
+        $DependencyFolder = $_.DependencyFolderName
+      }
+      else
+      {
+        $DependencyFolder = $HostConfig.Repository
+      }
+      Get-LabPostInstallationActivity -KeepFolder -ScriptFileName $_.ScriptFileName -DependencyFolder (Join-Path $postInstallationActivitiesPath $DependencyFolder)
+      }
   $tempSwissGuestPath = Join-Path ([System.IO.Path]::GetTempPath()) ".swissguest"
   New-LabDefinition -Name $LabName -DefaultVirtualizationEngine HyperV
   Add-LabVirtualNetworkDefinition -Name $VirtualNetworkName -VirtualizationEngine HyperV -HyperVProperties @{SwitchType = 'External'; AdapterName = 'Ethernet'}

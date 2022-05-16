@@ -271,8 +271,8 @@ function Update-SwissHost {
   Install-Module AutomatedLab -AllowClobber
   $LabSourcesFolder = New-LabSourcesFolder -Drive $Config.AutomatedLab.SourcesFolderDrive
   Write-Host "AutomatedLab ready in $LabSourcesFolder"
-  $ToolsPath = Join-Path $LabSourcesFolder "Tools/SwissChocolateyLab"
-  $PostInstallationActivitiesPath = Join-Path $LabSourcesFolder "PostInstallationActivities/SwissChocolateyLab"
+  $ToolsPath = Join-Path $LabSourcesFolder "Tools/$($Config.Repository)"
+  $PostInstallationActivitiesPath = Join-Path $LabSourcesFolder "PostInstallationActivities/$($Config.Repository)"
 
 
 
