@@ -144,10 +144,10 @@ Missing Chocolatey configuration. No packages will be installed. Expecting eithe
       }
       if (@(350, 1604, 1614, 1641, 3010, 9999) -contains $chocoExitCode)
       {
-        Write-Host -ForegroundColor Yellow "Restart your computer to continue installing packages"
+        Write-Host -ForegroundColor Yellow "Chocolatey exited with $chocoExitCode. Restart your computer to continue installing packages"
         if ($GuestConfig.AutoUpdateEnabled)
         {
-          Reboot-Computer
+          Restart-Computer
         }
       }
     }
