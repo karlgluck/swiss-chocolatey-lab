@@ -33,7 +33,7 @@ function Update-SwissGuest {
   # TODO: This is a copy-paste from Update-SwissHost.ps1, can we combine them?
   if (-not $Scheduled)
   {
-    $accountId = ((Get-WMIObject -class Win32_ComputerSystem | Select-Object -ExpandProperty username)) 
+    $accountId = ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)
     $AutoUpdateTrigger = New-JobTrigger -AtLogOn
     $JobOptions = New-ScheduledJobOption -StartIfOnBattery -RunElevated
     $Task = Get-ScheduledJob -Name $GuestConfig.AutoUpdateJobName -ErrorAction SilentlyContinue
