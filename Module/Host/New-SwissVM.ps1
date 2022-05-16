@@ -87,6 +87,9 @@ function New-SwissVM {
     }
   }
 
+
+
+  
   
   # Make sure that we have the ISO to install this operating system
   $labSources = Get-LabSourcesLocation
@@ -119,6 +122,20 @@ function New-SwissVM {
   
 
 
+  # Use our installed SwissChocolateyLab PowerShell module to bootstrap the VM. We pass
+  # files into the VM via the PostInstallationActivities/SwissChocolateyLab folder.
+  $HostModuleFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
+  if (-not (Test-Path $HostModuleFolder))
+  {
+    Write-Host -ForegroundColor Red "Missing host modules folder. Try Update-SwissHost? Expected: $HostModuleFolder"
+    return
+  }
+  Compress-Archive -Force -Path $HostModuleFolder -DestinationPath (Join-Path (Get-LabSourcesLocation) "PostInstallationActivities/SwissChocolateyLab/PowerShellModule.zip")
+
+
+
+
+
   # Create a new lab that is connected to the internet
   # https://github.com/AutomatedLab/AutomatedLab/blob/develop/LabSources/SampleScripts/Introduction/05%20Single%20domain-joined%20server%20(internet%20facing).ps1
   # https://devblogs.microsoft.com/scripting/automatedlab-tutorial-part-2-create-a-simple-lab/
@@ -126,44 +143,13 @@ function New-SwissVM {
   $LabName = "$($VMName)SCLLab"
   $VirtualNetworkName = "$($VMName)SCLNet"
   $postInstallationActivitiesPath = Join-Path $labSources 'PostInstallationActivities'
-  $postInstallActivity = ($HostConfig.PostInstallationActivities + $GuestConfig.PostInstallationActivities) | ForEach-Object { Get-LabPostInstallationActivity -ScriptFileName $_.ScriptFileName -DependencyFolder (Join-Path $postInstallationActivitiesPath $_.DependencyFolderName) }
+  $postInstallActivity = ($HostConfig.PostInstallationActivities + $GuestConfig.PostInstallationActivities) | ForEach-Object { Get-LabPostInstallationActivity -KeepFolder -ScriptFileName $_.ScriptFileName -DependencyFolder (Join-Path $postInstallationActivitiesPath $_.DependencyFolderName) }
   $tempSwissGuestPath = Join-Path ([System.IO.Path]::GetTempPath()) ".swissguest"
   New-LabDefinition -Name $LabName -DefaultVirtualizationEngine HyperV
   Add-LabVirtualNetworkDefinition -Name $VirtualNetworkName -VirtualizationEngine HyperV -HyperVProperties @{SwitchType = 'External'; AdapterName = 'Ethernet'}
   Set-LabInstallationCredential -Username $HostConfig.Username -Password $Repository
   $MemoryInBytes = (Invoke-Expression $GuestConfig.VirtualMachine.Memory)
   Add-LabMachineDefinition -Name $VMName -Memory $MemoryInBytes -Network $VirtualNetworkName -OperatingSystem $GuestConfig.OperatingSystem.Version -PostInstallationActivity $postInstallActivity -ToolsPath "$labSources\Tools" -ToolsPathDestination 'C:\Tools'
-
-  # Copy the PowerShell module into the SwissChocolateyLab PostInstallationActivity folder so it gets copied into the VM
-  $HostModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
-  if (-not (Test-Path $HostModulesFolder))
-  {
-    Write-Host -ForegroundColor Red "Missing host modules folder. Try Update-SwissHost? Expected: $HostModulesFolder"
-    return
-  }
-  $HostPostInstallationActivitiesFolder = (Join-Path (Get-LabSourcesLocation) "PostInstallationActivities/SwissChocolateyLab")
-  Copy-Item -Recurse -Path $HostModulesFolder -Destination $HostPostInstallationActivitiesFolder
-
-<#
-  # Copy the PowerShell module into the VM
-  $HostModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
-  if (-not (Test-Path $HostModulesFolder))
-  {
-    Write-Host -ForegroundColor Red "Missing host modules folder. Try Update-SwissHost? Expected: $HostModulesFolder"
-    return
-  }
-  $Match = [RegEx]::Match(($env:PSModulePath -split ';')[0], "\\$($env:USERNAME)\\(.*)")
-  if ($Match.Success)
-  {
-    $DestinationFolderPath = "C:\Users\$($HostConfig.Username)\$($Match.Groups[0].Value)"
-  }
-  else
-  {
-    $DestinationFolderPath = "C:\Users\$($HostConfig.Username)\Documents\WindowsPowerShell\Modules"
-    Write-Host -ForegroundColor Red "Unable to parse the PSModulePath; using default: $DestinationFolderPath"
-  }
-  Copy-LabFileItem -Recurse -Path $HostModulesFolder -ComputerName $VMName -DestinationFolderPath $DestinationFolderPath
-#>
 
   # Finally, create our network and VM
   Install-Lab
@@ -173,9 +159,12 @@ function New-SwissVM {
   Copy-LabFileItem -Path $tempSwissGuestPath -ComputerName $VMName -DestinationFolderPath "C:\Users\$($HostConfig.Username)\Documents"
 
 
+
+
+
+
+  # Display results to the user
   Show-LabDeploymentSummary -Detailed
-
-
   Write-Host "Finished installing lab; log in with Username=$($HostConfig.Username) and Password=$Repository"
 
 }
