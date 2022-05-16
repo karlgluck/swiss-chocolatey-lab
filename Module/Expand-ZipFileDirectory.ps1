@@ -15,6 +15,7 @@ function Expand-ZipFileDirectory
     [string]$OutputPath
   )
 
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
   $DirectoryRegex = "\/" + ($DirectoryInZipFile.Trim('/\') -replace "/","\/") + "\/(.*)"
   try
   {
