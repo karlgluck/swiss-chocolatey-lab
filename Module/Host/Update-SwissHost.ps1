@@ -178,7 +178,7 @@ function Update-SwissHost {
   # Output: %LOCALAPPDATA%\Microsoft\Windows\PowerShell\ScheduledJobs\$JobName
   if (-not $Scheduled)
   {
-    $accountId = ((Get-WMIObject -class Win32_ComputerSystem | Select-Object -ExpandProperty username)) 
+    $accountId = ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)
     $AutoUpdateTrigger = New-JobTrigger -AtLogOn
     $JobOptions = New-ScheduledJobOption -StartIfOnBattery -RunElevated
     $Task = Get-ScheduledJob -Name $Config.AutoUpdateJobName -ErrorAction SilentlyContinue
