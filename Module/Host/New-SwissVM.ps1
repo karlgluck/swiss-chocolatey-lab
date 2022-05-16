@@ -63,6 +63,8 @@ function New-SwissVM {
     Branch=$Branch
     UserName=$UserName
     Token=$Token
+    AutoUpdateEnabled=$HostConfig.AutoUpdateEnabled
+    AutoUpdateJobName=$HostConfig.AutoUpdateJobName
   }
   Add-Member -Name 'RawUrl' -Value "https://raw.githubusercontent.com/$($GuestConfig.UserName)/$($GuestConfig.Repository)/$($GuestConfig.Branch)" -Force -InputObject $GuestConfig -MemberType NoteProperty
   if ($PSBoundParameters.ContainsKey('UseCommonConfig'))
