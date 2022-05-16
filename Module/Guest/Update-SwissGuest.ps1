@@ -112,7 +112,8 @@ function Update-SwissGuest {
   {
     if (-not (Test-Path $PackagesConfigPath))
     {
-      Write-Host -ForegroundColor Yellow @"Missing Chocolatey configuration. No packages will be installed. Expecting either:
+      Write-Host -ForegroundColor Yellow @"
+Missing Chocolatey configuration. No packages will be installed. Expecting either:
     * $PackagesConfigUrl
     * $PackagesConfigPath
 "@
