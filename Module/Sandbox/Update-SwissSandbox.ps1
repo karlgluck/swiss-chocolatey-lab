@@ -64,7 +64,7 @@ function Update-SwissSandbox {
     }
 
     # Save the host config into the guest config object
-    Add-Member -Name 'HostConfig' -Value $HostConfig -Force -InputObject $GuestConfig -MemberType NoteProperty
+    $GuestConfig = [PSCustomObject]@{ HostConfig = $HostConfig }
 
     # Parse the guest's repository configuration from GuestUrl
     $Match = [RegEx]::Match($Bootstrap.GuestUrl, 'github\.com\/([^\/]+)\/([^\/]+)\/(\S+)\/?')
