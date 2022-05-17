@@ -178,7 +178,7 @@ function Update-SwissSandbox {
 
 
   # Install Chocolatey
-  if (Test-Command 'choco')
+  if (Test-CommandExists 'choco')
   {
     choco upgrade chocolatey
   }
