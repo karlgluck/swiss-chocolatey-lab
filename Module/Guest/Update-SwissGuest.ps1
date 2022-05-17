@@ -74,7 +74,7 @@ function Update-SwissGuest {
 
   
   # Download the latest copy of the host repository
-  $TempRepositoryZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($GuestConfig.Username)-$($GuestConfig.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
+  $TempRepositoryZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($GuestConfig.HostConfig.UserName)-$($GuestConfig.HostConfig.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
   try
   {
     Write-Host "Downloading latest '$($GuestConfig.HostConfig.Repository)' branch $($GuestConfig.HostConfig.Branch) -> $TempRepositoryZipPath"
