@@ -40,7 +40,7 @@ function Update-SwissHost {
     $Match = [RegEx]::Match($Bootstrap.Url, 'githubusercontent\.com\/([^\/]+)\/([^\/]+)\/(\S+)\/Module\/Host\/Update-SwissHost.ps1')
     if ($Match.Success)
     {
-      Add-Member -Name 'Username' -Value $Match.Groups[1].Value -Force -InputObject $Config -MemberType NoteProperty
+      Add-Member -Name 'UserName' -Value $Match.Groups[1].Value -Force -InputObject $Config -MemberType NoteProperty
       Add-Member -Name 'Repository' -Value $Match.Groups[2].Value -Force -InputObject $Config -MemberType NoteProperty
       Add-Member -Name 'Branch' -Value $Match.Groups[3].Value -Force -InputObject $Config -MemberType NoteProperty
       Add-Member -Name 'RawUrl' -Value "https://raw.githubusercontent.com/$($Config.UserName)/$($Config.Repository)/$($Config.Branch)" -Force -InputObject $Config -MemberType NoteProperty
@@ -75,7 +75,7 @@ function Update-SwissHost {
   $GenericConfigUrl = "$($Config.RawUrl)/Config/.swisshost"
   $HostSpecificConfigUrl = "$($Config.RawUrl)/Config/${env:ComputerName}.swisshost"
   $Headers = @{Authorization=@('token ',$Config.Token) -join ''; 'Cache-Control'='no-store'}
-  $TempRepositoryZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($Config.Username)-$($Config.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
+  $TempRepositoryZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($Config.UserName)-$($Config.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
   $ModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
 
 
