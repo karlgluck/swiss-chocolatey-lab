@@ -10,8 +10,7 @@ function Update-SwissSandbox {
     [PSCustomObject]$Bootstrap
   )
 
-
-
+  $GuestConfigPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) ".swissguest"
 
   # Get the repository's configuration file
   if ($null -ne $Bootstrap)
@@ -39,7 +38,32 @@ function Update-SwissSandbox {
       return
     }
 
-    # Save the host config
+    $GenericHostConfigUrl = "$($HostConfig.RawUrl)/Config/.swisshost"
+
+    try
+    {
+      $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $GenericHostConfigUrl -Headers $Headers).Content | ConvertFrom-Json
+      Write-Host "Using generic host config: $GenericHostConfigUrl"
+    }
+    catch
+    {
+      Write-Host -ForegroundColor Red ">>>> Missing both default and host-specific config files in SCL repository <<<<"
+      Write-Host -ForegroundColor Red "Expected either:"
+      Write-Host -ForegroundColor Red " * $GenericHostConfigUrl"
+      Write-Host -ForegroundColor Red " * $HostSpecificConfigUrl"
+      return;
+    }
+    finally
+    {
+      if (Test-Path 'variable:RemoteConfig')
+      {
+        # Move properties into Config
+        $RemoteConfig.PSObject.Members | Where-Object { $_.MemberType -eq "NoteProperty" } | ForEach-Object { Add-Member -Name $_.Name -Value $_.Value -Force -InputObject $HostConfig -MemberType NoteProperty }
+        Remove-Variable -Name RemoteConfig
+      }
+    }
+
+    # Save the host config into the guest config object
     Add-Member -Name 'HostConfig' -Value $HostConfig -Force -InputObject $GuestConfig -MemberType NoteProperty
 
     # Parse the guest's repository configuration from GuestUrl
@@ -64,53 +88,39 @@ function Update-SwissSandbox {
   else
   {
     # Expect a config file to exist, otherwise we can't know what to do
-    if (-not (Test-Path $ConfigPath))
+    if (Test-Path $GuestConfigPath)
+    {
+      Write-Host "Loading guest config from $GuestConfigPath"
+      $GuestConfig = Get-Content $GuestConfigPath | ConvertFrom-Json
+    }
+    else
     {
       Write-Host -ForegroundColor Red ">>>> FATAL: Missing config file. Try bootstrapping again? (see README.md) <<<<"
-      Write-Host -ForegroundColor Red "Expected: $ConfigPath"
+      Write-Host -ForegroundColor Red "Expected: $GuestConfigPath"
       return
     }
   }
 
 
-
-  # Grab the configuration from the repository and merge it into $Config
-  $RemoteConfig = [PSCustomObject]@{}
+  # Grab the config from the guest repository and merge it into $GuestConfig
+  $GuestConfigUrl = "$($GuestConfig.RawUrl)/.swiss/config.json"
   try
   {
-    $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $HostSpecificConfigUrl -Headers $Headers).Content | ConvertFrom-Json
-    Write-Host "Using host-specific config: $HostSpecificConfigUrl"
-  }
-  catch
-  {
-    try
-    {
-      $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $GenericConfigUrl -Headers $Headers).Content | ConvertFrom-Json
-      Write-Host "Using generic host config: $GenericConfigUrl"
-    }
-    catch
-    {
-      Write-Host -ForegroundColor Red ">>>> Missing both default and host-specific config files in repository <<<<"
-      Write-Host -ForegroundColor Red "Expected either:"
-      Write-Host -ForegroundColor Red " * $GenericConfigUrl"
-      Write-Host -ForegroundColor Red " * $HostSpecificConfigUrl"
-      return;
-    }
+    $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $GuestConfigUrl -Headers $Headers).Content | ConvertFrom-Json
+    Write-Host "Using guest-specific config: $GuestConfigUrl"
   }
   finally
   {
     if (Test-Path 'variable:RemoteConfig')
     {
       # Move properties into Config
-      $RemoteConfig.PSObject.Members | Where-Object { $_.MemberType -eq "NoteProperty" } | ForEach-Object { Add-Member -Name $_.Name -Value $_.Value -Force -InputObject $Config -MemberType NoteProperty }
+      $RemoteConfig.PSObject.Members | Where-Object { $_.MemberType -eq "NoteProperty" } | ForEach-Object { Add-Member -Name $_.Name -Value $_.Value -Force -InputObject $GuestConfig -MemberType NoteProperty }
       Remove-Variable -Name RemoteConfig
     }
   }
 
-
-
   # Write the configuration file
-  ConvertTo-Json $RemoteConfig | Out-File -FilePath $GuestConfigPath
+  ConvertTo-Json $GuestConfig | Out-File -FilePath $GuestConfigPath
 
 
 
@@ -125,7 +135,7 @@ function Update-SwissSandbox {
 
 
   # Download the latest copy of the host repository
-  $TempRepositoryZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($GuestConfig.UserName)-$($GuestConfig.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
+  $TempRepositoryZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($GuestConfig.HostConfig.UserName)-$($GuestConfig.HostConfig.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
   try
   {
     Write-Host "Downloading latest '$($GuestConfig.HostConfig.Repository)' branch $($GuestConfig.HostConfig.Branch) -> $TempRepositoryZipPath"
