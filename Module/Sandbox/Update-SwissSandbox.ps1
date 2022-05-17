@@ -17,7 +17,8 @@ function Update-SwissSandbox {
   {
     Write-Host "Bootstrapping sandbox '${env:ComputerName}'"
 
-    $HostConfig = [PSCustomObject]@{}
+    $HostConfig = [PSCustomObject]@{Token = $Bootstrap.Token}
+    $HostHeaders = @{Authorization=('token ' + $HostConfig.Token); 'Cache-Control'='no-store'}
 
     # Save the access token
     Add-Member -Name 'Token' -Value $Bootstrap.Token -Force -InputObject $HostConfig -MemberType NoteProperty
@@ -42,7 +43,7 @@ function Update-SwissSandbox {
 
     try
     {
-      $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $GenericHostConfigUrl -Headers $Headers).Content | ConvertFrom-Json
+      $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $GenericHostConfigUrl -Headers $HostHeaders).Content | ConvertFrom-Json
       Write-Host "Using generic host config: $GenericHostConfigUrl"
     }
     catch
@@ -63,8 +64,9 @@ function Update-SwissSandbox {
       }
     }
 
-    # Save the host config into the guest config object
-    $GuestConfig = [PSCustomObject]@{ HostConfig = $HostConfig }
+    # Save the host config into the guest config object, then dispose of it
+    $GuestConfig = [PSCustomObject]@{ HostConfig = $HostConfig; Token = $HostConfig.Token }
+    Remove-Variable -Name HostConfig
 
     # Parse the guest's repository configuration from GuestUrl
     $Match = [RegEx]::Match($Bootstrap.GuestUrl, 'github\.com\/([^\/]+)\/([^\/]+)\/(\S+)\/?')
@@ -80,6 +82,17 @@ function Update-SwissSandbox {
     {
       Write-Host -ForegroundColor Red ">>>> Guest repository URL doesn't match expected format (see README.md) <<<<"
       return
+    }
+    
+    # If the usernames of the repositories don't match, ask the user if they want to access the repo with a different token
+    if ($GuestConfig.UserName -ne $GuestConfig.HostConfig.UserName)
+    {
+      Write-Host "Guest repository is from a different user. Enter another access token, if necessary, or leave it blank."
+      $OverrideGuestToken = Read-Host -Prompt "Guest Repository GitHub Token"
+      if ($OverrideGuestToken.StartsWith("ghp_"))
+      {
+        $GuestConfig.Token = $OverrideGuestToken
+      }
     }
 
     # Prevent accidental use of the Bootstrap variable later in the script
@@ -102,11 +115,21 @@ function Update-SwissSandbox {
   }
 
 
+
+  # Derived variables
+  $GuestHeaders = @{Authorization=('token ' + $GuestConfig.Token); 'Cache-Control'='no-store'}
+  $ModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
+  $PackagesConfigUrl = "$($GuestConfig.RawUrl)/.swiss/packages.config"
+  $PackagesConfigPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "packages.config"
+
+
+
+
   # Grab the config from the guest repository and merge it into $GuestConfig
   $GuestConfigUrl = "$($GuestConfig.RawUrl)/.swiss/config.json"
   try
   {
-    $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $GuestConfigUrl -Headers $Headers).Content | ConvertFrom-Json
+    $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $GuestConfigUrl -Headers $GuestHeaders).Content | ConvertFrom-Json
     Write-Host "Using guest-specific config: $GuestConfigUrl"
   }
   finally
@@ -125,21 +148,12 @@ function Update-SwissSandbox {
 
 
 
-  # Derived variables
-  $GuestHeaders = @{Authorization=('token ' + $GuestConfig.Token); 'Cache-Control'='no-store'}
-  $ModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
-  $PackagesConfigUrl = "$($GuestConfig.RawUrl)/.swiss/packages.config"
-  $PackagesConfigPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "packages.config"
-
-
-
-
   # Download the latest copy of the host repository
   $TempRepositoryZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($GuestConfig.HostConfig.UserName)-$($GuestConfig.HostConfig.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
   try
   {
     Write-Host "Downloading latest '$($GuestConfig.HostConfig.Repository)' branch $($GuestConfig.HostConfig.Branch) -> $TempRepositoryZipPath"
-    Invoke-WebRequest -Headers $SwissHeaders -Uri $GuestConfig.HostConfig.ZipUrl -OutFile $TempRepositoryZipPath
+    Invoke-WebRequest -Headers $HostHeaders -Uri $GuestConfig.HostConfig.ZipUrl -OutFile $TempRepositoryZipPath
     $ZipFileHash = (Get-FileHash $TempRepositoryZipPath -Algorithm SHA256).Hash
     Write-Host " > Downloaded, SHA256 = $ZipFileHash"
   }
