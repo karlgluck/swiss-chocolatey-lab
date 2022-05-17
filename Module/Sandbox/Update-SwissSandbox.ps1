@@ -12,20 +12,6 @@ function Update-SwissSandbox {
 
 
 
-  # Load the guest config file
-  $GuestConfigPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) ".swissguest"
-  if (Test-Path $GuestConfigPath)
-  {
-    Write-Host "Loading guest config from $GuestConfigPath"
-    $GuestConfig = Get-Content $GuestConfigPath | ConvertFrom-Json
-  }
-  else
-  {
-    Write-Host -ForegroundColor Red "No guest configuration found. Try reinstalling the VM? Expected: $GuestConfigPath"
-    return
-  }
-
-
 
   # Get the repository's configuration file
   if ($null -ne $Bootstrap)
@@ -41,7 +27,7 @@ function Update-SwissSandbox {
     $Match = [RegEx]::Match($Bootstrap.HostUrl, 'githubusercontent\.com\/([^\/]+)\/([^\/]+)\/(\S+)\/Module\/Sandbox\/Update-SwissSandbox.ps1')
     if ($Match.Success)
     {
-      Add-Member -Name 'Username' -Value $Match.Groups[1].Value -Force -InputObject $HostConfig -MemberType NoteProperty
+      Add-Member -Name 'UserName' -Value $Match.Groups[1].Value -Force -InputObject $HostConfig -MemberType NoteProperty
       Add-Member -Name 'Repository' -Value $Match.Groups[2].Value -Force -InputObject $HostConfig -MemberType NoteProperty
       Add-Member -Name 'Branch' -Value $Match.Groups[3].Value -Force -InputObject $HostConfig -MemberType NoteProperty
       Add-Member -Name 'RawUrl' -Value "https://raw.githubusercontent.com/$($HostConfig.UserName)/$($HostConfig.Repository)/$($HostConfig.Branch)" -Force -InputObject $HostConfig -MemberType NoteProperty
@@ -60,7 +46,7 @@ function Update-SwissSandbox {
     $Match = [RegEx]::Match($Bootstrap.GuestUrl, 'github\.com\/([^\/]+)\/([^\/]+)\/(\S+)\/?')
     if ($Match.Success)
     {
-      Add-Member -Name 'Username' -Value $Match.Groups[1].Value -Force -InputObject $GuestConfig -MemberType NoteProperty
+      Add-Member -Name 'UserName' -Value $Match.Groups[1].Value -Force -InputObject $GuestConfig -MemberType NoteProperty
       Add-Member -Name 'Repository' -Value $Match.Groups[2].Value -Force -InputObject $GuestConfig -MemberType NoteProperty
       Add-Member -Name 'Branch' -Value $Match.Groups[3].Value -Force -InputObject $GuestConfig -MemberType NoteProperty
       Add-Member -Name 'RawUrl' -Value "https://raw.githubusercontent.com/$($GuestConfig.UserName)/$($GuestConfig.Repository)/$($GuestConfig.Branch)" -Force -InputObject $GuestConfig -MemberType NoteProperty
