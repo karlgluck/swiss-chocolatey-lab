@@ -5,6 +5,7 @@
 function Test-CommandExists
 {
   Param(
+    [Parameter(Mandatory)]
     [string]$Name
   )
 
