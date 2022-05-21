@@ -10,7 +10,7 @@ function Update-SwissSandbox {
     [PSCustomObject]$Bootstrap
   )
 
-  $GuestConfigPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) ".swissguest"
+  $ProjectConfigPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) ".swisssandbox"
 
   # Get the repository's configuration file
   if ($null -ne $Bootstrap)
@@ -64,34 +64,34 @@ function Update-SwissSandbox {
       }
     }
 
-    # Save the host config into the guest config object, then dispose of it
-    $GuestConfig = [PSCustomObject]@{ HostConfig = $HostConfig; Token = $HostConfig.Token }
+    # Save the host config into the config object, then dispose of it
+    $ProjectConfig = [PSCustomObject]@{ HostConfig = $HostConfig; Token = $HostConfig.Token }
     Remove-Variable -Name HostConfig
 
-    # Parse the guest's repository configuration from GuestUrl
-    $Match = [RegEx]::Match($Bootstrap.GuestUrl, 'github\.com\/([^\/]+)\/([^\/]+)\/(\S+)\/?')
+    # Parse the repository configuration from ProjectUrl
+    $Match = [RegEx]::Match($Bootstrap.ProjectUrl, 'github\.com\/([^\/]+)\/([^\/]+)\/(\S+)\/?')
     if ($Match.Success)
     {
-      Add-Member -Name 'UserName' -Value $Match.Groups[1].Value -Force -InputObject $GuestConfig -MemberType NoteProperty
-      Add-Member -Name 'Repository' -Value $Match.Groups[2].Value -Force -InputObject $GuestConfig -MemberType NoteProperty
-      Add-Member -Name 'Branch' -Value $Match.Groups[3].Value -Force -InputObject $GuestConfig -MemberType NoteProperty
-      Add-Member -Name 'RawUrl' -Value "https://raw.githubusercontent.com/$($GuestConfig.UserName)/$($GuestConfig.Repository)/$($GuestConfig.Branch)" -Force -InputObject $GuestConfig -MemberType NoteProperty
-      Add-Member -Name 'ZipUrl' -Value "https://github.com/$($GuestConfig.UserName)/$($GuestConfig.Repository)/archive/refs/heads/$($GuestConfig.Branch).zip" -Force -InputObject $GuestConfig -MemberType NoteProperty
+      Add-Member -Name 'UserName' -Value $Match.Groups[1].Value -Force -InputObject $ProjectConfig -MemberType NoteProperty
+      Add-Member -Name 'Repository' -Value $Match.Groups[2].Value -Force -InputObject $ProjectConfig -MemberType NoteProperty
+      Add-Member -Name 'Branch' -Value $Match.Groups[3].Value -Force -InputObject $ProjectConfig -MemberType NoteProperty
+      Add-Member -Name 'RawUrl' -Value "https://raw.githubusercontent.com/$($ProjectConfig.UserName)/$($ProjectConfig.Repository)/$($ProjectConfig.Branch)" -Force -InputObject $ProjectConfig -MemberType NoteProperty
+      Add-Member -Name 'ZipUrl' -Value "https://github.com/$($ProjectConfig.UserName)/$($ProjectConfig.Repository)/archive/refs/heads/$($ProjectConfig.Branch).zip" -Force -InputObject $ProjectConfig -MemberType NoteProperty
     }
     else
     {
-      Write-Host -ForegroundColor Red ">>>> Guest repository URL doesn't match expected format (see README.md) <<<<"
+      Write-Host -ForegroundColor Red ">>>> repository URL doesn't match expected format (see README.md) <<<<"
       return
     }
     
     # If the usernames of the repositories don't match, ask the user if they want to access the repo with a different token
-    if ($GuestConfig.UserName -ne $GuestConfig.HostConfig.UserName)
+    if ($ProjectConfig.UserName -ne $ProjectConfig.HostConfig.UserName)
     {
-      Write-Host "Guest repository is from a different user. Enter another access token, if necessary, or leave it blank."
-      $OverrideGuestToken = Read-Host -Prompt "Guest Repository GitHub Token"
-      if ($OverrideGuestToken.StartsWith("ghp_"))
+      Write-Host "Repository is from a different user. Enter another access token if necessary, or leave it blank."
+      $OverrideToken = Read-Host -Prompt "Repository GitHub Token"
+      if ($OverrideToken.StartsWith("ghp_"))
       {
-        $GuestConfig.Token = $OverrideGuestToken
+        $ProjectConfig.Token = $OverrideToken
       }
     }
 
@@ -101,15 +101,15 @@ function Update-SwissSandbox {
   else
   {
     # Expect a config file to exist, otherwise we can't know what to do
-    if (Test-Path $GuestConfigPath)
+    if (Test-Path $ProjectConfigPath)
     {
-      Write-Host "Loading guest config from $GuestConfigPath"
-      $GuestConfig = Get-Content $GuestConfigPath | ConvertFrom-Json
+      Write-Host "Loading config from $ProjectConfigPath"
+      $ProjectConfig = Get-Content $ProjectConfigPath | ConvertFrom-Json
     }
     else
     {
       Write-Host -ForegroundColor Red ">>>> FATAL: Missing config file. Try bootstrapping again? (see README.md) <<<<"
-      Write-Host -ForegroundColor Red "Expected: $GuestConfigPath"
+      Write-Host -ForegroundColor Red "Expected: $ProjectConfigPath"
       return
     }
   }
@@ -117,49 +117,49 @@ function Update-SwissSandbox {
 
 
   # Derived variables
-  $GuestHeaders = @{Authorization=('token ' + $GuestConfig.Token); 'Cache-Control'='no-store'}
+  $SandboxHeaders = @{Authorization=('token ' + $ProjectConfig.Token); 'Cache-Control'='no-store'}
   $ModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
-  $PackagesConfigUrl = "$($GuestConfig.RawUrl)/.swiss/packages.config"
+  $PackagesConfigUrl = "$($ProjectConfig.RawUrl)/.swiss/packages.config"
   $PackagesConfigPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "packages.config"
 
 
 
 
-  # Grab the config from the guest repository and merge it into $GuestConfig
-  $GuestConfigUrl = "$($GuestConfig.RawUrl)/.swiss/config.json"
+  # Grab the config from the sandbox repository and merge it into $ProjectConfig
+  $ProjectConfigUrl = "$($ProjectConfig.RawUrl)/.swiss/config.json"
   try
   {
-    $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $GuestConfigUrl -Headers $GuestHeaders).Content | ConvertFrom-Json
-    Write-Host "Using guest-specific config: $GuestConfigUrl"
+    $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $ProjectConfigUrl -Headers $SandboxHeaders).Content | ConvertFrom-Json
+    Write-Host "Using repository config: $ProjectConfigUrl"
   }
   finally
   {
     if (Test-Path 'variable:RemoteConfig')
     {
       # Move properties into Config
-      $RemoteConfig.PSObject.Members | Where-Object { $_.MemberType -eq "NoteProperty" } | ForEach-Object { Add-Member -Name $_.Name -Value $_.Value -Force -InputObject $GuestConfig -MemberType NoteProperty }
+      $RemoteConfig.PSObject.Members | Where-Object { $_.MemberType -eq "NoteProperty" } | ForEach-Object { Add-Member -Name $_.Name -Value $_.Value -Force -InputObject $ProjectConfig -MemberType NoteProperty }
       Remove-Variable -Name RemoteConfig
     }
   }
 
   # Write the configuration file
-  ConvertTo-Json $GuestConfig | Out-File -FilePath $GuestConfigPath
+  ConvertTo-Json $ProjectConfig | Out-File -FilePath $ProjectConfigPath
 
 
 
 
   # Download the latest copy of the host repository
-  $TempRepositoryZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($GuestConfig.HostConfig.UserName)-$($GuestConfig.HostConfig.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
+  $TempRepositoryZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($ProjectConfig.HostConfig.UserName)-$($ProjectConfig.HostConfig.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
   try
   {
-    Write-Host "Downloading latest '$($GuestConfig.HostConfig.Repository)' branch $($GuestConfig.HostConfig.Branch) -> $TempRepositoryZipPath"
-    Invoke-WebRequest -Headers $HostHeaders -Uri $GuestConfig.HostConfig.ZipUrl -OutFile $TempRepositoryZipPath
+    Write-Host "Downloading latest '$($ProjectConfig.HostConfig.Repository)' branch $($ProjectConfig.HostConfig.Branch) -> $TempRepositoryZipPath"
+    Invoke-WebRequest -Headers $HostHeaders -Uri $ProjectConfig.HostConfig.ZipUrl -OutFile $TempRepositoryZipPath
     $ZipFileHash = (Get-FileHash $TempRepositoryZipPath -Algorithm SHA256).Hash
     Write-Host " > Downloaded, SHA256 = $ZipFileHash"
   }
   catch
   {
-    Write-Host -ForegroundColor Red "Unable to download host repository ZIP file from $($GuestConfig.HostConfig.ZipUrl)"
+    Write-Host -ForegroundColor Red "Unable to download host repository ZIP file from $($ProjectConfig.HostConfig.ZipUrl)"
     return
   }
 
@@ -192,75 +192,48 @@ function Update-SwissSandbox {
 
 
   # Install Chocolatey
-  if (Test-CommandExists 'choco')
-  {
-    choco upgrade chocolatey
-  }
-  else
-  {
-    Set-ExecutionPolicy Bypass -Scope Process -Force;
-    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;
-    Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-
-    # Global configuration
-    choco feature enable -n=allowGlobalConfirmation --no-color | Out-Null
-    choco feature enable -n=exitOnRebootDetected --no-color | Out-Null
-  }
+  Install-Chocolatey
 
 
 
 
-  # Download <guest-repo>/.swiss/packages.config
+  # Download <repo>/.swiss/packages.config
+  Write-Host "Installing packages.config..."
   try
   {
-    Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $GuestHeaders -OutFile $PackagesConfigPath
-    Write-Host "Installing choco packages from $PackagesConfigUrl"
+    Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $SandboxHeaders -OutFile $PackagesConfigPath
+    Write-Host " > Installing choco packages from $PackagesConfigUrl"
   }
   catch
   {
-    if (-not (Test-Path $PackagesConfigPath))
-    {
-      Write-Host -ForegroundColor Yellow @"
-Missing Chocolatey configuration. No packages will be installed. Expecting either:
-    * $PackagesConfigUrl
-    * $PackagesConfigPath
-"@
-    }
+    Write-Host -ForegroundColor Yellow " > No packages.config found at $PackagesConfigUrl"
   }
-
-
-
 
   # Install packages.config using Chocolatey
   if (Test-Path $PackagesConfigPath)
   {
-    $packagesAlreadyInstalled = (choco list --limit-output --local-only) | ForEach-Object { $_.Split("|")[0] }
-    $packagesRequiredByConfig = Select-Xml -Path $PackagesConfigPath -XPath "packages/package" | ForEach-Object { $_.Node.id }
-    $packagesToInstall = Compare-Object -ReferenceObject $packagesAlreadyInstalled -DifferenceObject $packagesRequiredByConfig | Where-Object { $_.SideIndicator -eq "=>" } | ForEach-Object { $_.InputObject }
-
-    if ($packagesToInstall.Count -gt 0)
+    $Result = Install-ChocolateyPackageConfig -Path $PackagesConfigPath
+    if ($Result.PackagesNotInstalled.Count -gt 0)
     {
-      [void](& choco install $PackagesConfigPath --limit-output --no-color -y)
-      $chocoExitCode = $LASTEXITCODE
-
-      $packagesSubsequentlyInstalled = (choco list --limit-output --local-only) | ForEach-Object { $_.Split("|")[0] }
-      $packagesNotInstalled = Compare-Object -ReferenceObject $packagesSubsequentlyInstalled -DifferenceObject $packagesRequiredByConfig | Where-Object { $_.SideIndicator -eq "=>" } | ForEach-Object { $_.InputObject }
-      if ($packagesNotInstalled.Count -gt 0)
-      {
-        Write-Host -ForegroundColor Yellow "Not all packages could be installed. Missing: $($packagesNotInstalled -join ', ')"
-        $chocoExitCode = 9999
-      }
-      if (@(350, 1604, 1614, 1641, 3010, 9999) -contains $chocoExitCode)
-      {
-        Write-Host -ForegroundColor Yellow "Chocolatey exited with $chocoExitCode. Restart your computer to continue installing packages"
-        if ($GuestConfig.AutoUpdateEnabled)
-        {
-          Restart-Computer
-        }
-      }
+      Write-Host -ForegroundColor Red (" > Packages couldn't be installed: " + ($Result.PackagesNotInstalled -join ", "))
+    }
+    if ($Result.RestartRequired)
+    {
+      Write-Host -ForegroundColor Red " > Installing packages requires a restart, but we are running in a sandbox and restarting will erase all data. Some packages may not work."
+    }
+    if ($Result.Finished)
+    {
+      Write-Host " > Finished installing packages."
     }
   }
-
+  else
+  {
+      Write-Host -ForegroundColor Yellow @"
+ > Missing Chocolatey configuration. No packages will be installed. Expecting either:
+    * $PackagesConfigUrl
+    * $PackagesConfigPath
+"@
+  }
 
 
 }

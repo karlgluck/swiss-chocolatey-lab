@@ -2,7 +2,8 @@
 #>
 function Update-SwissGuest {
   Param (
-    [switch]$Scheduled
+    [switch]$Scheduled,
+    [switch]$FirstTime
   )
 
 
@@ -99,58 +100,59 @@ function Update-SwissGuest {
   Expand-ZipFileDirectory -ZipFilePath $TempRepositoryZipPath -DirectoryInZipFile "Module" -OutputPath $ModulesFolder
   Import-Module SwissChocolateyLab -Force
 
+  # Update the version of chocolatey
+  if (-not $FirstTime)
+  {
+    Install-Chocolatey
+  }
 
-
-
-  # Download <guest-repo>/.swiss/packages.config
+  # Download <repo>/.swiss/packages.config
+  Write-Host "Installing packages.config..."
   try
   {
-    Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $GuestHeaders -OutFile $PackagesConfigPath
-    Write-Host "Installing choco packages from $PackagesConfigUrl"
+    Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $SwissHeaders -OutFile $PackagesConfigPath
+    Write-Host " > Installing choco packages from $PackagesConfigUrl"
   }
   catch
   {
-    if (-not (Test-Path $PackagesConfigPath))
-    {
-      Write-Host -ForegroundColor Yellow @"
-Missing Chocolatey configuration. No packages will be installed. Expecting either:
-    * $PackagesConfigUrl
-    * $PackagesConfigPath
-"@
-    }
+    Write-Host -ForegroundColor Yellow " > No packages.config found at $PackagesConfigUrl"
   }
-
-
-
 
   # Install packages.config using Chocolatey
   if (Test-Path $PackagesConfigPath)
   {
-    $packagesAlreadyInstalled = (choco list --limit-output --local-only) | ForEach-Object { $_.Split("|")[0] }
-    $packagesRequiredByConfig = Select-Xml -Path $PackagesConfigPath -XPath "packages/package" | ForEach-Object { $_.Node.id }
-    $packagesToInstall = Compare-Object -ReferenceObject $packagesAlreadyInstalled -DifferenceObject $packagesRequiredByConfig | Where-Object { $_.SideIndicator -eq "=>" } | ForEach-Object { $_.InputObject }
-
-    if ($packagesToInstall.Count -gt 0)
+    $Result = Install-ChocolateyPackageConfig -Path $PackagesConfigPath
+    if ($Result.PackagesNotInstalled.Count -gt 0)
     {
-      [void](& choco install $PackagesConfigPath --limit-output --no-color -y)
-      $chocoExitCode = $LASTEXITCODE
-
-      $packagesSubsequentlyInstalled = (choco list --limit-output --local-only) | ForEach-Object { $_.Split("|")[0] }
-      $packagesNotInstalled = Compare-Object -ReferenceObject $packagesSubsequentlyInstalled -DifferenceObject $packagesRequiredByConfig | Where-Object { $_.SideIndicator -eq "=>" } | ForEach-Object { $_.InputObject }
-      if ($packagesNotInstalled.Count -gt 0)
+      Write-Host -ForegroundColor Red (" > Packages couldn't be installed: " + ($Result.PackagesNotInstalled -join ", "))
+    }
+    if ($Result.RestartRequired)
+    {
+      if ($GuestConfig.AutoUpdateEnabled -or $FirstTime)
       {
-        Write-Host -ForegroundColor Yellow "Not all packages could be installed. Missing: $($packagesNotInstalled -join ', ')"
-        $chocoExitCode = 9999
+        Restart-Computer
       }
-      if (@(350, 1604, 1614, 1641, 3010, 9999) -contains $chocoExitCode)
+      else
       {
-        Write-Host -ForegroundColor Yellow "Chocolatey exited with $chocoExitCode. Restart your computer to continue installing packages"
-        if ($GuestConfig.AutoUpdateEnabled)
-        {
-          Restart-Computer
-        }
+        Write-Host -ForegroundColor Red " > Installing packages requires a reboot"
       }
     }
+    if ($Result.Finished)
+    {
+      Write-Host " > Finished installing packages."
+    }
+  }
+  else
+  {
+      Write-Host -ForegroundColor Yellow @"
+ > Missing Chocolatey configuration. No packages will be installed. Expecting either:
+    * $PackagesConfigUrl
+    * $PackagesConfigPath
+"@
+  }
+
+
+
   }
 
 

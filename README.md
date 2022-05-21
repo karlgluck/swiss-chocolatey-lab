@@ -15,7 +15,7 @@ Swiss Chocolatey Lab (SCL) runs disposable developer environments on a Windows 1
 The easiest way to experiment with SCL is to run it in a [Windows Sandbox](https://docs.microsoft.com/en-us/windows/security/threat-protection/windows-sandbox/windows-sandbox-overview). Copy and paste this command into an admin PowerShell terminal in your sandbox:
 
 ```
-Set-ExecutionPolicy Bypass -Scope Process -Force ; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072 ; (Invoke-WebRequest -Method Get -Uri ($__URL = (Read-Host -Prompt "Update-SwissSandbox.ps1") -replace "github\.com\/(.*)\/blob\/(.*)",'raw.githubusercontent.com/$1/$2') -Headers @{Authorization=@('token ',($__TOKEN = Read-Host -Prompt "GitHub Token")) -join ''; 'Cache-Control'='no-store'}).Content | Invoke-Expression ; Update-SwissSandbox -Bootstrap ([PSCustomObject]@{Token=$__TOKEN; HostUrl=$__URL; GuestUrl=(Read-Host -Prompt "GitHub Repository")}) ; Remove-Variable @('__TOKEN','__URL')
+Set-ExecutionPolicy Bypass -Scope Process -Force ; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072 ; (Invoke-WebRequest -Method Get -Uri ($__URL = (Read-Host -Prompt "Update-SwissSandbox.ps1") -replace "github\.com\/(.*)\/blob\/(.*)",'raw.githubusercontent.com/$1/$2') -Headers @{Authorization=@('token ',($__TOKEN = Read-Host -Prompt "GitHub Token")) -join ''; 'Cache-Control'='no-store'}).Content | Invoke-Expression ; Update-SwissSandbox -Bootstrap ([PSCustomObject]@{Token=$__TOKEN; HostUrl=$__URL; ProjectUrl=(Read-Host -Prompt "Project GitHub Repository")}) ; Remove-Variable @('__TOKEN','__URL')
 ```
 
 You will be asked to provide three additional inputs:
