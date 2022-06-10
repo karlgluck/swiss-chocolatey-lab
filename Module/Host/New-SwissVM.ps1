@@ -22,7 +22,7 @@ function New-SwissVM {
   # Clean up the VM name
   if (-not($PSBoundParameters.ContainsKey('VMName')) -or ($null -eq $VMName))
   {
-    $VMName = $Repository -replace '[^a-zA-Z0-9-]',''
+    $VMName = $Repository -replace '[^a-zA-Z0-9]',''
   }
   if ($VMName.Length -gt 15)
   {
