@@ -146,18 +146,20 @@ function Update-SwissGuest {
   {
       Write-Host -ForegroundColor Yellow @"
  > Missing Chocolatey configuration. No packages will be installed. Expecting either:
-    * $PackagesConfigUrl
-    * $PackagesConfigPath
+    1. $PackagesConfigUrl
+    2. $PackagesConfigPath
 "@
   }
 
-
-
-  }
-
-
-
+  Write-Host "SwissChocolateyLab (Guest) is now installed. Commands:"
+  (Get-Command -Module "SwissChocolateyLab" | Where-Object { $_.CommandType -eq 'Function' } | ForEach-Object { " * $($_.Name)" })
 
 
 
 }
+
+
+
+
+
+
