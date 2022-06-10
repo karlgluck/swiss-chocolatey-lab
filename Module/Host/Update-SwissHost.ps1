@@ -289,4 +289,7 @@ function Update-SwissHost {
   # Now, we're ready to use New-SwissVM
   #
 
+  Write-Host "SwissChocolateyLab (Host) is now ready. Commands:"
+  (Get-Command -Module "SwissChocolateyLab" | Where-Object { $_.CommandType -eq 'Function' } | ForEach-Object { " * $($_.Name)" })
+
 }

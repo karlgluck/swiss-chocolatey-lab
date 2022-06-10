@@ -151,7 +151,7 @@ function Update-SwissGuest {
 "@
   }
 
-  Write-Host "SwissChocolateyLab (Guest) is now installed. Commands:"
+  Write-Host "SwissChocolateyLab (Guest) is now ready. Commands:"
   (Get-Command -Module "SwissChocolateyLab" | Where-Object { $_.CommandType -eq 'Function' } | ForEach-Object { " * $($_.Name)" })
 
 

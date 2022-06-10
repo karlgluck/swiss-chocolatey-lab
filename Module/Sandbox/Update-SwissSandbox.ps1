@@ -230,7 +230,7 @@ function Update-SwissSandbox {
 "@
   }
 
-  Write-Host "SwissChocolateyLab (Sandbox) is now installed. Commands:"
+  Write-Host "SwissChocolateyLab (Sandbox) is now ready. Commands:"
   (Get-Command -Module "SwissChocolateyLab" | Where-Object { $_.CommandType -eq 'Function' } | ForEach-Object { " * $($_.Name)" })
 
 }
