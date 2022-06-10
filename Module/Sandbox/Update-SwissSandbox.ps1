@@ -45,6 +45,10 @@ function Update-SwissSandbox {
     {
       $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $GenericHostConfigUrl -Headers $HostHeaders).Content | ConvertFrom-Json
       Write-Host "Using generic host config: $GenericHostConfigUrl"
+
+      # Move properties into Config
+      $RemoteConfig.PSObject.Members | Where-Object { $_.MemberType -eq "NoteProperty" } | ForEach-Object { Add-Member -Name $_.Name -Value $_.Value -Force -InputObject $HostConfig -MemberType NoteProperty }
+      Remove-Variable -Name RemoteConfig
     }
     catch
     {
@@ -53,15 +57,6 @@ function Update-SwissSandbox {
       Write-Host -ForegroundColor Red " * $GenericHostConfigUrl"
       Write-Host -ForegroundColor Red " * $HostSpecificConfigUrl"
       return;
-    }
-    finally
-    {
-      if (Test-Path 'variable:RemoteConfig')
-      {
-        # Move properties into Config
-        $RemoteConfig.PSObject.Members | Where-Object { $_.MemberType -eq "NoteProperty" } | ForEach-Object { Add-Member -Name $_.Name -Value $_.Value -Force -InputObject $HostConfig -MemberType NoteProperty }
-        Remove-Variable -Name RemoteConfig
-      }
     }
 
     # Save the host config into the config object, then dispose of it
@@ -131,15 +126,15 @@ function Update-SwissSandbox {
   {
     $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $ProjectConfigUrl -Headers $SandboxHeaders).Content | ConvertFrom-Json
     Write-Host "Using repository config: $ProjectConfigUrl"
+
+    # Move properties into Config
+    $RemoteConfig.PSObject.Members | Where-Object { $_.MemberType -eq "NoteProperty" } | ForEach-Object { Add-Member -Name $_.Name -Value $_.Value -Force -InputObject $ProjectConfig -MemberType NoteProperty }
+    Remove-Variable -Name RemoteConfig
   }
-  finally
+  catch
   {
-    if (Test-Path 'variable:RemoteConfig')
-    {
-      # Move properties into Config
-      $RemoteConfig.PSObject.Members | Where-Object { $_.MemberType -eq "NoteProperty" } | ForEach-Object { Add-Member -Name $_.Name -Value $_.Value -Force -InputObject $ProjectConfig -MemberType NoteProperty }
-      Remove-Variable -Name RemoteConfig
-    }
+    # don't worry about the remote config since it doesn't exist
+    Write-Host -Color Yellow "Repository config not found, looked for: $ProjectConfigUrl"
   }
 
   # Write the configuration file
