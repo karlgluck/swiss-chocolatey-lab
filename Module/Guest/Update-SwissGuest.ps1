@@ -109,12 +109,11 @@ function Update-SwissGuest {
 
   # Download <repo>/.swiss/packages.config
   Write-Host "Installing packages.config..."
-  $RemoteConfig = Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $GuestHeaders -OutFile $PackagesConfigPath
-  Write-Host "content = "
-  Write-Host [System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String($RemoteConfig.content))
   try
   {
-    Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $GuestHeaders -OutFile $PackagesConfigPath
+    $PackagesConfigResponse = Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $GuestHeaders
+    [System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String($PackagesConfigResponse.content)) | Set-Content -Path $PackagesConfigPath
+    #Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $GuestHeaders -OutFile $PackagesConfigPath
     Write-Host " > Installing choco packages from $PackagesConfigUrl"
   }
   catch
