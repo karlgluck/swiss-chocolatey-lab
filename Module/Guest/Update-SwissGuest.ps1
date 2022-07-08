@@ -109,7 +109,9 @@ function Update-SwissGuest {
 
   # Download <repo>/.swiss/packages.config
   Write-Host "Installing packages.config..."
-    Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $GuestHeaders -OutFile $PackagesConfigPath
+  $RemoteConfig = Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $GuestHeaders -OutFile $PackagesConfigPath
+  Write-Host "content = "
+  Write-Host [System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String($RemoteConfig.content))
   try
   {
     Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $GuestHeaders -OutFile $PackagesConfigPath
