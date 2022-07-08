@@ -101,7 +101,8 @@ function Update-SwissGuest {
     return
   }
 
-  # Update the version of chocolatey
+  # Update the version of Chocolatey. Skip if it's the first time because it was just
+  # installed by the post-installation activity Install-SwissChocolateyLabGuest.ps1
   if (-not $FirstTime)
   {
     Install-Chocolatey
@@ -109,11 +110,18 @@ function Update-SwissGuest {
 
   # Download <repo>/.swiss/packages.config
   Write-Host "Installing packages.config..."
-    $PackagesConfigResponse = (Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $GuestHeaders).Content | ConvertFrom-Json
-    [System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String($PackagesConfigResponse.content)) | Set-Content -Path $PackagesConfigPath
   try
   {
-    #Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $GuestHeaders -OutFile $PackagesConfigPath
+    # With a public URL of the file, we used to just do this:
+    #
+    #   Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $GuestHeaders -OutFile $PackagesConfigPath
+    #
+    # However, that doesn't work with private repositories. Instead, we have to use the GitHub API like this:
+
+    $PackagesConfigApiResponse = (Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $GuestHeaders).Content | ConvertFrom-Json
+    [System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String($PackagesConfigApiResponse.content)) | Set-Content -Path $PackagesConfigPath
+
+    # Now we have a file we can work with
     Write-Host " > Installing choco packages from $PackagesConfigUrl"
   }
   catch
