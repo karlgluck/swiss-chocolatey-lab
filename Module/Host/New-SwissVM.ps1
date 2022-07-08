@@ -67,6 +67,7 @@ function New-SwissVM {
     AutoUpdateJobName=$HostConfig.AutoUpdateJobName
   }
   Add-Member -Name 'RawUrl' -Value "https://raw.githubusercontent.com/$($GuestConfig.UserName)/$($GuestConfig.Repository)/$($GuestConfig.Branch)" -Force -InputObject $GuestConfig -MemberType NoteProperty
+  Add-Member -Name 'ApiContentsUrl' -Value "https://api.github.com/repos/$($GuestConfig.UserName)/$($GuestConfig.Repository)/contents" -Force -InputObject $GuestConfig -MemberType NoteProperty
   if ($PSBoundParameters.ContainsKey('UseCommonConfig'))
   {
     # Use a generic configuration from the main repository
@@ -75,7 +76,7 @@ function New-SwissVM {
   else
   {
     # Use a specialized config in the guest repository
-    $GuestSpecificConfigUrl = "$($GuestConfig.RawUrl)/.swiss/config.json"
+    $GuestSpecificConfigUrl = "$($GuestConfig.ApiContentsUrl)/.swiss/config.json"
   }
 
   $GuestHeaders = @{Authorization=('token ' + $GuestConfig.Token); 'Cache-Control'='no-store'}
@@ -168,15 +169,15 @@ function New-SwissVM {
   }
   $postInstallationActivitiesPath = Join-Path $labSources 'PostInstallationActivities'
   $postInstallActivity = ($HostConfig.PostInstallationActivities + $GuestConfig.PostInstallationActivities) | ForEach-Object {
-      if (Get-Member -InputObject $_ -Name "DependencyFolderName")
-      {
-        $DependencyFolder = $_.DependencyFolderName
-      }
-      else
-      {
-        $DependencyFolder = $HostConfig.Repository
-      }
-      Get-LabPostInstallationActivity -KeepFolder -ScriptFileName $_.ScriptFileName -DependencyFolder (Join-Path $postInstallationActivitiesPath $DependencyFolder)
+        if (Get-Member -InputObject $_ -Name "DependencyFolderName")
+        {
+          $DependencyFolder = $_.DependencyFolderName
+        }
+        else
+        {
+          $DependencyFolder = $HostConfig.Repository
+        }
+        Get-LabPostInstallationActivity -KeepFolder -ScriptFileName $_.ScriptFileName -DependencyFolder (Join-Path $postInstallationActivitiesPath $DependencyFolder)
       }
   $tempSwissGuestPath = Join-Path ([System.IO.Path]::GetTempPath()) ".swissguest"
   New-LabDefinition -Name $LabName -DefaultVirtualizationEngine HyperV

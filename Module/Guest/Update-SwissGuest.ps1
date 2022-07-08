@@ -23,11 +23,8 @@ function Update-SwissGuest {
   # Derived variables
   $GuestHeaders = @{Authorization=('token ' + $GuestConfig.Token); 'Cache-Control'='no-store'}
   $ModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
-  $PackagesConfigUrl = "$($GuestConfig.RawUrl)/.swiss/packages.config"
+  $PackagesConfigUrl = "$($GuestConfig.ApiContentsUrl)/.swiss/packages.config"
   $PackagesConfigPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "packages.config"
-
-
-
 
 
   # Make sure that Update-SwissGuest gets called when this user logs in
