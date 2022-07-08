@@ -3,7 +3,8 @@
 function Update-SwissGuest {
   Param (
     [switch]$Scheduled,
-    [switch]$FirstTime
+    [switch]$FirstTime,
+    [switch]$SkipModuleUpdate,
   )
 
 
@@ -19,12 +20,6 @@ function Update-SwissGuest {
     Write-Host -ForegroundColor Red "No guest configuration found. Try reinstalling the VM? Expected: $GuestConfigPath"
     return
   }
-
-  # Derived variables
-  $GuestHeaders = @{Authorization=('token ' + $GuestConfig.Token); 'Cache-Control'='no-store'}
-  $ModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
-  $PackagesConfigUrl = "$($GuestConfig.ApiContentsUrl)/.swiss/packages.config"
-  $PackagesConfigPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "packages.config"
 
 
   # Make sure that Update-SwissGuest gets called when this user logs in
@@ -70,32 +65,41 @@ function Update-SwissGuest {
 
 
 
-  
-  # Download the latest copy of the host repository
-  $TempRepositoryZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($GuestConfig.HostConfig.UserName)-$($GuestConfig.HostConfig.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
-  try
+  # Derived variables
+  $GuestHeaders = @{Authorization=('token ' + $GuestConfig.Token); 'Cache-Control'='no-store'}
+  $ModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
+  $PackagesConfigUrl = "$($GuestConfig.ApiContentsUrl)/.swiss/packages.config"
+  $PackagesConfigPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "packages.config"
+
+  if (-not $SkipModuleUpdate)
   {
-    Write-Host "Downloading latest '$($GuestConfig.HostConfig.Repository)' branch $($GuestConfig.HostConfig.Branch) -> $TempRepositoryZipPath"
-    Invoke-WebRequest -Headers $SwissHeaders -Uri $GuestConfig.HostConfig.ZipUrl -OutFile $TempRepositoryZipPath
-    $ZipFileHash = (Get-FileHash $TempRepositoryZipPath -Algorithm SHA256).Hash
-    Write-Host " > Downloaded, SHA256 = $ZipFileHash"
-  }
-  catch
-  {
-    Write-Host -ForegroundColor Red "Unable to download host repository ZIP file from $($GuestConfig.HostConfig.ZipUrl)"
+    # Download the latest copy of the host repository
+    $TempRepositoryZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($GuestConfig.HostConfig.UserName)-$($GuestConfig.HostConfig.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
+    try
+    {
+      Write-Host "Downloading latest '$($GuestConfig.HostConfig.Repository)' branch $($GuestConfig.HostConfig.Branch) -> $TempRepositoryZipPath"
+      Invoke-WebRequest -Headers $SwissHeaders -Uri $GuestConfig.HostConfig.ZipUrl -OutFile $TempRepositoryZipPath
+      $ZipFileHash = (Get-FileHash $TempRepositoryZipPath -Algorithm SHA256).Hash
+      Write-Host " > Downloaded, SHA256 = $ZipFileHash"
+    }
+    catch
+    {
+      Write-Host -ForegroundColor Red "Unable to download host repository ZIP file from $($GuestConfig.HostConfig.ZipUrl)"
+      return
+    }
+    
+    # Extract the SCL module into our PowerShell modules directory, clobbering anything that's there
+    # Install /Module/** as a PowerShell module
+    # https://community.idera.com/database-tools/powershell/powertips/b/tips/posts/extract-specific-files-from-zip-archive
+    Write-Host "Install $($GuestConfig.HostConfig.Repository)/Module/** as a PowerShell module into $ModulesFolder"
+    if (Test-Path $ModulesFolder) { Remove-Item -Recurse -Force $ModulesFolder }
+    Expand-ZipFileDirectory -ZipFilePath $TempRepositoryZipPath -DirectoryInZipFile "Module" -OutputPath $ModulesFolder
+
+    # Re-run the update with the newer version
+    Import-Module SwissChocolateyLab -Force
+    Update-SwissGuest -SkipModuleUpdate -Scheduled $Scheduled -FirstTime $FirstTime
     return
   }
-
-
-
-  
-  # Extract the SCL module into our PowerShell modules directory, clobbering anything that's there
-  # Install /Module/** as a PowerShell module
-  # https://community.idera.com/database-tools/powershell/powertips/b/tips/posts/extract-specific-files-from-zip-archive
-  Write-Host "Install $($GuestConfig.HostConfig.Repository)/Module/** as a PowerShell module into $ModulesFolder"
-  if (Test-Path $ModulesFolder) { Remove-Item -Recurse -Force $ModulesFolder }
-  Expand-ZipFileDirectory -ZipFilePath $TempRepositoryZipPath -DirectoryInZipFile "Module" -OutputPath $ModulesFolder
-  Import-Module SwissChocolateyLab -Force
 
   # Update the version of chocolatey
   if (-not $FirstTime)
@@ -105,9 +109,10 @@ function Update-SwissGuest {
 
   # Download <repo>/.swiss/packages.config
   Write-Host "Installing packages.config..."
+    Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $GuestHeaders -OutFile $PackagesConfigPath
   try
   {
-    Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $SwissHeaders -OutFile $PackagesConfigPath
+    Invoke-WebRequest -Method Get -Uri $PackagesConfigUrl -Headers $GuestHeaders -OutFile $PackagesConfigPath
     Write-Host " > Installing choco packages from $PackagesConfigUrl"
   }
   catch
@@ -125,6 +130,11 @@ function Update-SwissGuest {
     }
     if ($Result.RestartRequired)
     {
+      if ($Scheduled)
+      {
+        # wait a minute if a scheduled operation wants to restart the computer so that we don't end up in an accidental reboot loop
+        Wait-Event -Time 60
+      }
       if ($GuestConfig.AutoUpdateEnabled -or $FirstTime)
       {
         Restart-Computer
