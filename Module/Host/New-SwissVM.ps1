@@ -157,7 +157,15 @@ function New-SwissVM {
   # https://devblogs.microsoft.com/scripting/automatedlab-tutorial-part-2-create-a-simple-lab/
   # https://automatedlab.org/en/latest/PSFileTransfer/en-us/Copy-LabFileItem/
   $LabName = "$($VMName)SCLLab"
-  $VirtualNetworkName = "$($VMName)SCLNet"
+  $ExistingVirtualNetworkName = (Get-VMSwitch -SwitchType External | Select-Object -First 1).Name
+  if ([string]::IsNullOrEmpty($ExistingVirtualNetworkName))
+  {
+    $VirtualNetworkName = $ExistingVirtualNetworkName
+  }
+  else
+  {
+    $VirtualNetworkName = "SCLNetwork"
+  }
   $postInstallationActivitiesPath = Join-Path $labSources 'PostInstallationActivities'
   $postInstallActivity = ($HostConfig.PostInstallationActivities + $GuestConfig.PostInstallationActivities) | ForEach-Object {
       if (Get-Member -InputObject $_ -Name "DependencyFolderName")
