@@ -4,7 +4,7 @@ function Update-SwissGuest {
   Param (
     [switch]$Scheduled,
     [switch]$FirstTime,
-    [switch]$SkipModuleUpdate,
+    [switch]$SkipModuleUpdate
   )
 
 
