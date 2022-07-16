@@ -158,34 +158,32 @@ function New-SwissVM {
   # https://github.com/AutomatedLab/AutomatedLab/blob/develop/LabSources/SampleScripts/Introduction/05%20Single%20domain-joined%20server%20(internet%20facing).ps1
   # https://devblogs.microsoft.com/scripting/automatedlab-tutorial-part-2-create-a-simple-lab/
   # https://automatedlab.org/en/latest/PSFileTransfer/en-us/Copy-LabFileItem/
-  $LabName = "$($VMName)SCLLab"
-  #$ExistingVirtualNetworkName = (Get-VMSwitch -SwitchType External | Select-Object -First 1).Name
-  #if ([string]::IsNullOrEmpty($ExistingVirtualNetworkName))
-  #{
-  #  $VirtualNetworkName = "SCLNetwork"
-  #}
-  #else
-  #{
-  #  $VirtualNetworkName = $ExistingVirtualNetworkName
-  #}
+  $ExistingVirtualNetworkName = (Get-VMSwitch -SwitchType External | Select-Object -First 1).Name
+  if ([string]::IsNullOrEmpty($ExistingVirtualNetworkName))
+  {
+    $VirtualNetworkName = "SCLNetwork"
+  }
+  else
+  {
+    $VirtualNetworkName = $ExistingVirtualNetworkName
+  }
   $postInstallationActivitiesPath = Join-Path $labSources 'PostInstallationActivities'
   $postInstallActivity = ($HostConfig.PostInstallationActivities + $GuestConfig.PostInstallationActivities) | ForEach-Object {
-        if (Get-Member -InputObject $_ -Name "DependencyFolderName")
-        {
-          $DependencyFolder = $_.DependencyFolderName
-        }
-        else
-        {
-          $DependencyFolder = $HostConfig.Repository
-        }
-        Get-LabPostInstallationActivity -KeepFolder -ScriptFileName $_.ScriptFileName -DependencyFolder (Join-Path $postInstallationActivitiesPath $DependencyFolder)
+      if (Get-Member -InputObject $_ -Name "DependencyFolderName")
+      {
+        $DependencyFolder = $_.DependencyFolderName
       }
+      else
+      {
+        $DependencyFolder = $HostConfig.Repository
+      }
+      Get-LabPostInstallationActivity -KeepFolder -ScriptFileName $_.ScriptFileName -DependencyFolder (Join-Path $postInstallationActivitiesPath $DependencyFolder)
+    }
   $tempSwissGuestPath = Join-Path ([System.IO.Path]::GetTempPath()) ".swissguest"
-  New-LabDefinition -Name $LabName -DefaultVirtualizationEngine HyperV
-  #Add-LabVirtualNetworkDefinition -Name $VirtualNetworkName -VirtualizationEngine HyperV -HyperVProperties @{SwitchType = 'External'; AdapterName = 'Ethernet'}
+  New-LabDefinition -Name "$($VMName)SCLLab" -DefaultVirtualizationEngine HyperV
+  Add-LabVirtualNetworkDefinition -Name $VirtualNetworkName -VirtualizationEngine HyperV -HyperVProperties @{SwitchType = 'External'; AdapterName = 'Ethernet'}
   Set-LabInstallationCredential -Username $GuestConfig.Username -Password $Repository
   $MemoryInBytes = (Invoke-Expression $GuestConfig.VirtualMachine.Memory)
-  $VirtualNetworkName = "Default Switch"
   Add-LabMachineDefinition -Name $VMName -Memory $MemoryInBytes -Network $VirtualNetworkName -OperatingSystem $GuestConfig.OperatingSystem.Version -PostInstallationActivity $postInstallActivity -ToolsPath "$labSources\Tools" -ToolsPathDestination 'C:\Tools'
 
   # Finally, create our network and VM
