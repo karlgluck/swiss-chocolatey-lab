@@ -4,13 +4,14 @@
 .INPUTS
 .OUTPUTS
 .NOTES
-  Can be called in 3 ways: first-time bootstrapping, every time the host restarts, or manually.
+  Can be called in 4 ways: first-time bootstrapping, every time the host restarts, manually, or recursively by itself (after being called any of those ways)
 #>
 function Update-SwissHost {
   [CmdletBinding()]
   Param (
     [PSCustomObject]$Bootstrap,
-    [Switch]$Scheduled
+    [Switch]$Scheduled,
+    [Switch]$SkipModuleUpdate
   )
 
 
@@ -53,7 +54,8 @@ function Update-SwissHost {
       return
     }
 
-    # Prevent accidental use of the Bootstrap variable later in the script
+    # Save the bootstrap info to the $ConfigPath immediately in case anything goes wrong later
+    ConvertTo-Json $Config | Out-File -FilePath $ConfigPath
     Remove-Variable -Name 'Bootstrap'
   }
   else
@@ -132,45 +134,53 @@ function Update-SwissHost {
 
   Write-Host -ForegroundColor Blue "AutoUpdateEnabled = $($Config.AutoUpdateEnabled)"
 
+  # The first time the script is invoked, it will self-update. Then, it continues updating using the newer version of the script.
+  if (-not ($SkipModuleUpdate))
+  {
+    # Download the entire repository
+    try
+    {
+      Write-Host "Downloading latest '$($Config.Repository)' branch $($Config.Branch) -> $TempRepositoryZipPath"
+      Invoke-WebRequest -Headers $SwissHeaders -Uri $Config.ZipUrl -OutFile $TempRepositoryZipPath
+      $ZipFileHash = (Get-FileHash $TempRepositoryZipPath -Algorithm SHA256).Hash
+      Write-Host " > Downloaded, SHA256 = $ZipFileHash"
+    }
+    catch
+    {
+      Write-Host -ForegroundColor Red "Unable to download repository ZIP file from $($Config.ZipUrl)"
+      return
+    }
 
-  # Download the entire repository
-  try
-  {
-    Write-Host "Downloading latest '$($Config.Repository)' branch $($Config.Branch) -> $TempRepositoryZipPath"
-    Invoke-WebRequest -Headers $SwissHeaders -Uri $Config.ZipUrl -OutFile $TempRepositoryZipPath
-    $ZipFileHash = (Get-FileHash $TempRepositoryZipPath -Algorithm SHA256).Hash
-    Write-Host " > Downloaded, SHA256 = $ZipFileHash"
-  }
-  catch
-  {
-    Write-Host -ForegroundColor Red "Unable to download repository ZIP file from $($Config.ZipUrl)"
+
+
+
+    # Install /Module/** as a PowerShell module
+    # https://community.idera.com/database-tools/powershell/powertips/b/tips/posts/extract-specific-files-from-zip-archive
+    Write-Host "Install <repo>/Module/** as a PowerShell module into $ModulesFolder"
+    if (Test-Path $ModulesFolder) { Remove-Item -Recurse -Force $ModulesFolder }
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $Zip = [System.IO.Compression.ZipFile]::OpenRead($TempRepositoryZipPath)
+    $Zip.Entries | 
+      Where-Object { $_.Name -ne "" } |
+      ForEach-Object {
+        $Match = [RegEx]::Match($_.FullName, "\/Module\/(.*)")
+        if ($Match.Success)
+        {
+          $FilePath = Join-Path $ModulesFolder $Match.Groups[1].Value
+          $DirectoryPath = Split-Path -Parent $FilePath
+          if (-not (Test-Path $DirectoryPath)) { New-Item $DirectoryPath -ItemType Directory | Out-Null }
+          Write-Host " > Extracting $($_.FullName)"
+          [System.IO.Compression.ZipFileExtensions]::ExtractToFile($_, $FilePath, $true) | Out-Null
+        }
+      }
+    $Zip.Dispose()
+
+    # Invoke ourselves to continue the script using the updated version
+    Import-Module SwissChocolateyLab -Force
+    Update-SwissHost -Scheduled $Scheduled -SkipModuleUpdate
+
     return
   }
-
-
-
-
-  # Install /Module/** as a PowerShell module
-  # https://community.idera.com/database-tools/powershell/powertips/b/tips/posts/extract-specific-files-from-zip-archive
-  Write-Host "Install <repo>/Module/** as a PowerShell module into $ModulesFolder"
-  if (Test-Path $ModulesFolder) { Remove-Item -Recurse -Force $ModulesFolder }
-  Add-Type -AssemblyName System.IO.Compression.FileSystem
-  $Zip = [System.IO.Compression.ZipFile]::OpenRead($TempRepositoryZipPath)
-  $Zip.Entries | 
-    Where-Object { $_.Name -ne "" } |
-    ForEach-Object {
-      $Match = [RegEx]::Match($_.FullName, "\/Module\/(.*)")
-      if ($Match.Success)
-      {
-        $FilePath = Join-Path $ModulesFolder $Match.Groups[1].Value
-        $DirectoryPath = Split-Path -Parent $FilePath
-        if (-not (Test-Path $DirectoryPath)) { New-Item $DirectoryPath -ItemType Directory | Out-Null }
-        Write-Host " > Extracting $($_.FullName)"
-        [System.IO.Compression.ZipFileExtensions]::ExtractToFile($_, $FilePath, $true) | Out-Null
-      }
-    }
-  $Zip.Dispose()
-  Import-Module SwissChocolateyLab -Force
 
 
   # Make sure that Update-SwissHost function gets called when this user logs in
@@ -286,10 +296,8 @@ function Update-SwissHost {
   Expand-ZipFileDirectory -ZipFilePath $TempRepositoryZipPath -DirectoryInZipFile "PostInstallationActivities" -OutputPath $PostInstallationActivitiesPath
 
 
-  # 
-  # Now, we're ready to use New-SwissVM
-  #
 
+  # Wrap things up!
   Write-Host "SwissChocolateyLab (Host) is now ready. Commands:"
   (Get-Command -Module "SwissChocolateyLab" | Where-Object { $_.CommandType -eq 'Function' } | ForEach-Object { " * $($_.Name)" })
 
