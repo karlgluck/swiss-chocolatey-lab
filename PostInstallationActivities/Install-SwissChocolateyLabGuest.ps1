@@ -13,6 +13,9 @@ Expand-Archive -Path $PowerShellModuleZipPath -DestinationPath ($env:PSModulePat
 Import-Module SwissChocolateyLab -Force
 
 
+# Create a network shared folder that the host can access at \\THISMACHINE\Shared
+New-Item "Shared" -ItemType Directory
+New-SMBShare -Name "Shared" -Path "C:\Shared"
 
 
 # Set up Chocolatey

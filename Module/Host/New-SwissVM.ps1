@@ -194,7 +194,13 @@ function New-SwissVM {
   Copy-LabFileItem -Path $tempSwissGuestPath -ComputerName $VMName -DestinationFolderPath "C:\Users\$($GuestConfig.UserName)\Documents"
 
 
-
+  # Map a network drive to the VM's Shared folder
+  $AvailableDrivePath = Get-ChildItem -Path Function:[d-z]: -Name | Where-Object { -not (Test-Path -Path $_) } | Select-Object -First 1
+  $Domain = $VMName.ToUpper()
+  $Username = "$Domain\$($GuestConfig.Username)"
+  $Password = ConvertTo-SecureString $Repository -AsPlainText -Force
+  $Credential = New-Object -Typename System.Management.Automation.PSCredential -ArgumentList $Username, $Password
+  New-PSDrive -Name $AvailableDrivePath.Substring(0,1) -PSProvider FileSystem -Persist -Root "\\$Domain\Shared" -Credential $Credential
 
 
 

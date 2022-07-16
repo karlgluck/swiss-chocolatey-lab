@@ -10,4 +10,10 @@ function Remove-SwissVM {
   )
 
   Remove-Lab -Name "${VMName}SCLLab" -RemoveExternalSwitches
+
+  # TODO: Get logical mapped drives, find any that map to this VM's domain, and remove them.
+  #
+  # Get-WmiObject -ClassName Win32_MappedLogicalDisk | Select-Object PSComputerName,Name,ProviderName
+
+
 }
