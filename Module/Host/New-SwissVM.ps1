@@ -162,11 +162,11 @@ function New-SwissVM {
   $ExistingVirtualNetworkName = (Get-VMSwitch -SwitchType External | Select-Object -First 1).Name
   if ([string]::IsNullOrEmpty($ExistingVirtualNetworkName))
   {
-    $VirtualNetworkName = $ExistingVirtualNetworkName
+    $VirtualNetworkName = "SCLNetwork"
   }
   else
   {
-    $VirtualNetworkName = "SCLNetwork"
+    $VirtualNetworkName = $ExistingVirtualNetworkName
   }
   $postInstallationActivitiesPath = Join-Path $labSources 'PostInstallationActivities'
   $postInstallActivity = ($HostConfig.PostInstallationActivities + $GuestConfig.PostInstallationActivities) | ForEach-Object {
