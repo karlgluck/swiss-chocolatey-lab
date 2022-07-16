@@ -159,15 +159,15 @@ function New-SwissVM {
   # https://devblogs.microsoft.com/scripting/automatedlab-tutorial-part-2-create-a-simple-lab/
   # https://automatedlab.org/en/latest/PSFileTransfer/en-us/Copy-LabFileItem/
   $LabName = "$($VMName)SCLLab"
-  $ExistingVirtualNetworkName = (Get-VMSwitch -SwitchType External | Select-Object -First 1).Name
-  if ([string]::IsNullOrEmpty($ExistingVirtualNetworkName))
-  {
-    $VirtualNetworkName = "SCLNetwork"
-  }
-  else
-  {
-    $VirtualNetworkName = $ExistingVirtualNetworkName
-  }
+  #$ExistingVirtualNetworkName = (Get-VMSwitch -SwitchType External | Select-Object -First 1).Name
+  #if ([string]::IsNullOrEmpty($ExistingVirtualNetworkName))
+  #{
+  #  $VirtualNetworkName = "SCLNetwork"
+  #}
+  #else
+  #{
+  #  $VirtualNetworkName = $ExistingVirtualNetworkName
+  #}
   $postInstallationActivitiesPath = Join-Path $labSources 'PostInstallationActivities'
   $postInstallActivity = ($HostConfig.PostInstallationActivities + $GuestConfig.PostInstallationActivities) | ForEach-Object {
         if (Get-Member -InputObject $_ -Name "DependencyFolderName")
@@ -182,9 +182,10 @@ function New-SwissVM {
       }
   $tempSwissGuestPath = Join-Path ([System.IO.Path]::GetTempPath()) ".swissguest"
   New-LabDefinition -Name $LabName -DefaultVirtualizationEngine HyperV
-  Add-LabVirtualNetworkDefinition -Name $VirtualNetworkName -VirtualizationEngine HyperV -HyperVProperties @{SwitchType = 'External'; AdapterName = 'Ethernet'}
+  #Add-LabVirtualNetworkDefinition -Name $VirtualNetworkName -VirtualizationEngine HyperV -HyperVProperties @{SwitchType = 'External'; AdapterName = 'Ethernet'}
   Set-LabInstallationCredential -Username $GuestConfig.Username -Password $Repository
   $MemoryInBytes = (Invoke-Expression $GuestConfig.VirtualMachine.Memory)
+  $VirtualNetworkName = "Default Switch"
   Add-LabMachineDefinition -Name $VMName -Memory $MemoryInBytes -Network $VirtualNetworkName -OperatingSystem $GuestConfig.OperatingSystem.Version -PostInstallationActivity $postInstallActivity -ToolsPath "$labSources\Tools" -ToolsPathDestination 'C:\Tools'
 
   # Finally, create our network and VM
