@@ -1,6 +1,6 @@
 <#
 .DESCRIPTION
-  Installs a new SwissVM from the given repository in the account defined by .swisshost
+  Cleans up a SCL project. Deletes the VM and any associated network shared drives.
 #>
 function Remove-SwissVM {
   [CmdletBinding()]
@@ -9,6 +9,7 @@ function Remove-SwissVM {
     [string]$VMName
   )
 
+  #Remove-VM $VMName
   Remove-Lab -Name "${VMName}SCLLab" -RemoveExternalSwitches
 
   # TODO: Get logical mapped drives, find any that map to this VM's domain, and remove them.

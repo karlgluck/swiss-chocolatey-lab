@@ -55,12 +55,12 @@ Once the setup script completes, you're ready to install a virtual machine.
 On the host in an administrator PowerShell terminal with any of these commands:
 
 ```
-New-SwissVM
-New-SwissVM <repository>
-New-SwissVM -Repository <repository> -Branch <branch> -VMName <name> -UseCommonConfig <name>
+Install-SwissVM
+Install-SwissVM <repository>
+Install-SwissVM -Repository <repository> -Branch <branch> -VMName <name> -UseCommonConfig <name>
 ```
 
-By default, `Add-SwissVM` reads from the `main` branch and will create a VM with the same name as the repository.
+By default, `Install-SwissVM` reads from the `main` branch and will create a VM with the same name as the repository.
 
 `-UseCommonConfig` allows you to install a SwissVM without having to edit the repository by grabbing one of the `*.swissguest` files from the [Config](./Config) folder in this repository.
 
