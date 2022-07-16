@@ -15,5 +15,7 @@ function Remove-SwissVM {
   #
   # Get-WmiObject -ClassName Win32_MappedLogicalDisk | Select-Object PSComputerName,Name,ProviderName
 
+  $NamesToRemove = Get-WmiObject -ClassName Win32_MappedLogicalDisk | Select-Object PSComputerName,Name,ProviderName | Where-Object { $_.ProviderName -eq "\\$VMName\Shared" } | ForEach-Object { $_.Name.Substring(0, 1) }
+  Remove-PSDrive -Name $NamesToRemove
 
 }

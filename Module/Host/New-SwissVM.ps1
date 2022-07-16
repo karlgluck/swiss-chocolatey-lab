@@ -195,7 +195,7 @@ function New-SwissVM {
 
 
   # Map a network drive to the VM's Shared folder
-  $AvailableDrivePath = Get-ChildItem -Path Function:[d-z]: -Name | Where-Object { -not (Test-Path -Path $_) } | Select-Object -First 1
+  $AvailableDrivePath = (Compare-Object (Get-PSDrive | % { $_.Name }) (67..90 | %{[char]$_}) | Where-Object { $_.SideIndicator -eq "=>" } | Select-Object -First 1).InputObject
   $Domain = $VMName.ToUpper()
   $Username = "$Domain\$($GuestConfig.Username)"
   $Password = ConvertTo-SecureString $Repository -AsPlainText -Force
