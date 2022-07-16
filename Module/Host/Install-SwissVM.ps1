@@ -200,7 +200,7 @@ function Install-SwissVM {
   $Username = "$Domain\$($GuestConfig.Username)"
   $Password = ConvertTo-SecureString $Repository -AsPlainText -Force
   $Credential = New-Object -Typename System.Management.Automation.PSCredential -ArgumentList $Username, $Password
-  New-PSDrive -Name $AvailableDrivePath.Substring(0,1) -PSProvider FileSystem -Persist -Root "\\$Domain\Shared" -Credential $Credential
+  New-PSDrive -Name $AvailableDrivePath -PSProvider FileSystem -Persist -Root "\\$Domain\Shared" -Credential $Credential
 
 
 
