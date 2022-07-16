@@ -2,7 +2,7 @@
 .DESCRIPTION
   Installs a new SwissVM from the given repository in the account defined by .swisshost
 #>
-function New-SwissVM {
+function Install-SwissVM {
   [CmdletBinding()]
   Param (
     [Parameter(Mandatory,Position=0)]

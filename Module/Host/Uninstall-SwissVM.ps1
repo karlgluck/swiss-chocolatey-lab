@@ -2,7 +2,7 @@
 .DESCRIPTION
   Cleans up a SCL project. Deletes the VM and any associated network shared drives.
 #>
-function Remove-SwissVM {
+function Uninstall-SwissVM {
   [CmdletBinding()]
   Param (
     [Parameter(Mandatory,Position=0)]
