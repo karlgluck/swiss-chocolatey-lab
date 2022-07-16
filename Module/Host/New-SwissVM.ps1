@@ -71,7 +71,7 @@ function New-SwissVM {
   if ($PSBoundParameters.ContainsKey('UseCommonConfig'))
   {
     # Use a generic configuration from the main repository
-    $GuestSpecificConfigUrl = "$($HostConfig.RawUrl)/Config/$UseCommonConfig.swissguest"
+    $GuestSpecificConfigUrl = "$($HostConfig.ApiContentsUrl)/Config/$UseCommonConfig.swissguest"
   }
   else
   {
@@ -82,7 +82,8 @@ function New-SwissVM {
   $GuestHeaders = @{Authorization=('token ' + $GuestConfig.Token); 'Cache-Control'='no-store'}
   try
   {
-    $RemoteConfig = (Invoke-WebRequest -Method Get -Uri $GuestSpecificConfigUrl -Headers $GuestHeaders).Content | ConvertFrom-Json
+    $GuestConfigApiResponse = (Invoke-WebRequest -Method Get -Uri $GuestSpecificConfigUrl -Headers $GuestHeaders).Content | ConvertFrom-Json
+    $RemoteConfig = [System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String($GuestConfigApiResponse.content)) | ConvertFrom-Json
     Write-Host "Read guest config from $GuestSpecificConfigUrl"
   }
   catch

@@ -44,6 +44,7 @@ function Update-SwissHost {
       Add-Member -Name 'Repository' -Value $Match.Groups[2].Value -Force -InputObject $Config -MemberType NoteProperty
       Add-Member -Name 'Branch' -Value $Match.Groups[3].Value -Force -InputObject $Config -MemberType NoteProperty
       Add-Member -Name 'RawUrl' -Value "https://raw.githubusercontent.com/$($Config.UserName)/$($Config.Repository)/$($Config.Branch)" -Force -InputObject $Config -MemberType NoteProperty
+      Add-Member -Name 'ApiContentsUrl' -Value "https://api.github.com/repos/$($Config.UserName)/$($Config.Repository)/contents" -Force -InputObject $Config -MemberType NoteProperty
       Add-Member -Name 'ZipUrl' -Value "https://github.com/$($Config.UserName)/$($Config.Repository)/archive/refs/heads/$($Config.Branch).zip" -Force -InputObject $Config -MemberType NoteProperty
     }
     else
