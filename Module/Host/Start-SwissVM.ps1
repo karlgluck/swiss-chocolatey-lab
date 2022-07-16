@@ -9,7 +9,7 @@ function Start-SwissVM {
     [string]$VMName
   )
 
-  $vm = Get-VM -Id $Name -ErrorAction SilentlyContinue
+  $vm = Get-VM -Name $VMName -ErrorAction SilentlyContinue
   if($vm.State -eq 'off')
   {
     Start-VM -VM $vm
