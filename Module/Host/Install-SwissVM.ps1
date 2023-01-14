@@ -62,12 +62,19 @@ function Install-SwissVM {
     Repository=$Repository
     Branch=$Branch
     UserName=$UserName
-    Token=$Token
     AutoUpdateEnabled=$HostConfig.AutoUpdateEnabled
     AutoUpdateJobName=$HostConfig.AutoUpdateJobName
   }
   Add-Member -Name 'RawUrl' -Value "https://raw.githubusercontent.com/$($GuestConfig.UserName)/$($GuestConfig.Repository)/$($GuestConfig.Branch)" -Force -InputObject $GuestConfig -MemberType NoteProperty
   Add-Member -Name 'ApiContentsUrl' -Value "https://api.github.com/repos/$($GuestConfig.UserName)/$($GuestConfig.Repository)/contents" -Force -InputObject $GuestConfig -MemberType NoteProperty
+  try {
+    # Only add the token if it is valid
+    Invoke-WebRequest -Method Get -Uri "https://api.github.com/repositories" -Headers @{Authorization=@('token ',$Token) -join ''}
+    Add-Member -Name 'Token' -Value $Token -Force -InputObject $GuestConfig -MemberType NoteProperty
+  }
+  catch {
+    Write-Host -ForegroundColor Yellow ">>>> Authorization token invalid or not provided; can only access PUBLIC repositories <<<<"
+  }
   if ($PSBoundParameters.ContainsKey('UseCommonConfig'))
   {
     # Use a generic configuration from the main repository
@@ -79,7 +86,12 @@ function Install-SwissVM {
     $GuestSpecificConfigUrl = "$($GuestConfig.ApiContentsUrl)/.swiss/config.json"
   }
 
-  $GuestHeaders = @{Authorization=('token ' + $GuestConfig.Token); 'Cache-Control'='no-store'}
+  $GuestHeaders = @{'Cache-Control'='no-store'}
+  if ([bool]($GuestConfig.PSObject.Properties.name -match "Token"))
+  {
+    # Only add the token if it is valid
+    $GuestHeaders.Add('Authorization', @('token ',$GuestConfig.Token) -join '')
+  }
   try
   {
     $GuestConfigApiResponse = (Invoke-WebRequest -Method Get -Uri $GuestSpecificConfigUrl -Headers $GuestHeaders).Content | ConvertFrom-Json
