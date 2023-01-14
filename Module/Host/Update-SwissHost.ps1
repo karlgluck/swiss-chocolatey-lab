@@ -70,20 +70,22 @@ function Update-SwissHost {
   }
 
 
-
-
-
-
   # Now that we have the config, define derived variables
   $GenericConfigUrl = "$($Config.RawUrl)/Config/.swisshost"
   $HostSpecificConfigUrl = "$($Config.RawUrl)/Config/${env:ComputerName}.swisshost"
-  $Headers = @{Authorization=@('token ',$Config.Token) -join ''; 'Cache-Control'='no-store'}
   $TempRepositoryZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($Config.UserName)-$($Config.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
   $ModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
 
-
-
-
+  # Web request headers get an 'Authorization' token added only if the one we have is valid
+  $Headers = @{'Cache-Control'='no-store'}
+  try {
+    # Only add the token if it is valid
+    Invoke-WebRequest -Method Get -Uri "https://api.github.com/repositories" -Headers @{Authorization=@('token ',$Config.Token) -join ''}
+    $Headers.Add('Authorization', @('token ',$Config.Token) -join '')
+  }
+  catch {
+    Write-Host -ForegroundColor Yellow ">>>> Authorization token invalid; will be limited to read-only access of public repositories <<<<"
+  }
 
   # Require Administrator privileges
   if (-not (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)))
