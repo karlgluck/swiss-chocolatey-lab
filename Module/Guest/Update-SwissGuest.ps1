@@ -66,7 +66,15 @@ function Update-SwissGuest {
 
 
   # Derived variables
-  $GuestHeaders = @{Authorization=('token ' + $GuestConfig.Token); 'Cache-Control'='no-store'}
+  $GuestHeaders = @{'Cache-Control'='no-store'}
+  try {
+    # Only add the token if it is valid
+    Invoke-WebRequest -Method Get -Uri "https://api.github.com/repositories" -Headers @{Authorization=@('token ',$GuestConfig.Token) -join ''}
+    $GuestHeaders.Add('Authorization', @('token ',$GuestConfig.Token) -join '')
+  }
+  catch {
+    Write-Host -ForegroundColor Yellow ">>>> Authorization token invalid or not provided; can only access PUBLIC repositories <<<<"
+  }
   $ModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
   $PackagesConfigUrl = "$($GuestConfig.ApiContentsUrl)/.swiss/packages.config"
   $PackagesConfigPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "packages.config"
