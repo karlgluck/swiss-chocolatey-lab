@@ -206,12 +206,12 @@ function Install-SwissVM {
 
 
   # Map a network drive to the VM's Shared folder
-  $AvailableDrivePath = (Compare-Object (((Get-PSDrive | % { $_.Name }) + (Get-WmiObject Win32_NetworkConnection | % { $_.LocalName.Substring(0,1) }))) (67..90 | %{[char]$_}) | Where-Object { $_.SideIndicator -eq "=>" } | Select-Object -First 1).InputObject
-  $Domain = $VMName.ToUpper()
-  $Username = "$Domain\$($GuestConfig.Username)"
-  $Password = ConvertTo-SecureString $Repository -AsPlainText -Force
-  $Credential = New-Object -Typename System.Management.Automation.PSCredential -ArgumentList $Username, $Password
-  New-PSDrive -Name $AvailableDrivePath -PSProvider FileSystem -Persist -Root "\\$Domain\Shared" -Credential $Credential
+  #$AvailableDrivePath = (Compare-Object (((Get-PSDrive | % { $_.Name }) + (Get-WmiObject Win32_NetworkConnection | % { $_.LocalName.Substring(0,1) }))) (67..90 | %{[char]$_}) | Where-Object { $_.SideIndicator -eq "=>" } | Select-Object -First 1).InputObject
+  #$Domain = $VMName.ToUpper()
+  #$Username = "$Domain\$($GuestConfig.Username)"
+  #$Password = ConvertTo-SecureString $Repository -AsPlainText -Force
+  #$Credential = New-Object -Typename System.Management.Automation.PSCredential -ArgumentList $Username, $Password
+  #New-PSDrive -Name $AvailableDrivePath -PSProvider FileSystem -Persist -Root "\\$Domain\Shared" -Credential $Credential
 
 
 
