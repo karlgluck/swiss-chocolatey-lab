@@ -107,3 +107,4 @@ Repositories use the `/.swiss` subdirectory to store their own environment setup
 ## Other useful commands
 
 * If you're not sure which VM's are available, use `Get-SwissVM` for a list
+* `explorer ($env:PSModulePath -split ';')[0]` opens the folder where SCL is installed
