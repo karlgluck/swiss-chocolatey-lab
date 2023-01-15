@@ -11,7 +11,7 @@ function Update-SwissHost {
   Param (
     [PSCustomObject]$Bootstrap,
     [Switch]$Scheduled,
-    [Switch]$SkipModuleUpdate
+    [string]$UpdatedModuleZip
   )
 
 
@@ -73,7 +73,6 @@ function Update-SwissHost {
   # Now that we have the config, define derived variables
   $GenericConfigUrl = "$($Config.RawUrl)/Config/.swisshost"
   $HostSpecificConfigUrl = "$($Config.RawUrl)/Config/${env:ComputerName}.swisshost"
-  $TempRepositoryZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($Config.UserName)-$($Config.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
   $ModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
 
   # Web request headers get an 'Authorization' token added only if the one we have is valid
@@ -137,8 +136,10 @@ function Update-SwissHost {
   Write-Host -ForegroundColor Blue "AutoUpdateEnabled = $($Config.AutoUpdateEnabled)"
 
   # The first time the script is invoked, it will self-update. Then, it continues updating using the newer version of the script.
-  if (-not ($SkipModuleUpdate))
+  if ([string]::IsNullOrEmpty($UpdatedModuleZip))
   {
+    $TempRepositoryZipPath = Join-Path ([System.IO.Path]::GetTempPath()) "$($Config.UserName)-$($Config.Repository)-$([System.IO.Path]::GetRandomFileName()).zip"
+
     # Download the entire repository
     try
     {
@@ -152,9 +153,6 @@ function Update-SwissHost {
       Write-Host -ForegroundColor Red "Unable to download repository ZIP file from $($Config.ZipUrl)"
       return
     }
-
-
-
 
     # Install /Module/** as a PowerShell module
     # https://community.idera.com/database-tools/powershell/powertips/b/tips/posts/extract-specific-files-from-zip-archive
@@ -179,9 +177,13 @@ function Update-SwissHost {
 
     # Invoke ourselves to continue the script using the updated version
     Import-Module SwissChocolateyLab -Force
-    Update-SwissHost -Scheduled $Scheduled -SkipModuleUpdate
+    Update-SwissHost -Scheduled $Scheduled -UpdatedModuleZip $TempRepositoryZipPath
 
     return
+  }
+  else
+  {
+    $TempRepositoryZipPath = $UpdatedModuleZip
   }
 
 
