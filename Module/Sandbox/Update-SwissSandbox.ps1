@@ -17,11 +17,22 @@ function Update-SwissSandbox {
   {
     Write-Host "Bootstrapping sandbox '${env:ComputerName}'"
 
-    $HostConfig = [PSCustomObject]@{Token = $Bootstrap.Token}
-    $HostHeaders = @{Authorization=('token ' + $HostConfig.Token); 'Cache-Control'='no-store'}
+    $HostConfig = [PSCustomObject]@{}
+    try {
+      # Only add the token if it is valid
+      Invoke-WebRequest -Method Get -Uri "https://api.github.com/repositories" -Headers @{Authorization=@('token ',$Bootstrap.Token) -join ''}
+      Add-Member -Name 'Token' -Value $Bootstrap.Token -Force -InputObject $HostConfig -MemberType NoteProperty
+    }
+    catch {
+      Write-Host -ForegroundColor Yellow ">>>> Authorization token invalid or not provided; can only access PUBLIC repositories <<<<"
+    }
 
-    # Save the access token
-    Add-Member -Name 'Token' -Value $Bootstrap.Token -Force -InputObject $HostConfig -MemberType NoteProperty
+    $HostHeaders = @{'Cache-Control'='no-store'}
+    if ([bool]($HostConfig.PSObject.Properties.name -match "Token"))
+    {
+      # Only add the token if it is valid
+      $HostHeaders.Add('Authorization', @('token ',$GuestConfig.Token) -join '')
+    }
 
     # Parse the host's repository configuration from HostUrl
     $Match = [RegEx]::Match($Bootstrap.HostUrl, 'githubusercontent\.com\/([^\/]+)\/([^\/]+)\/(\S+)\/Module\/Sandbox\/Update-SwissSandbox.ps1')
