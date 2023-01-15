@@ -30,8 +30,8 @@ function Update-SwissHost {
   }
 
   # Get the repository's configuration file
-  if ($null -ne $Bootstrap)
-  {$Bootstrap | Write-Host
+  if ([bool]$Bootstrap)
+  {
     Write-Host "Bootstrapping '${env:ComputerName}' from ${Bootstrap.Url}"
 
     # Save the access token
