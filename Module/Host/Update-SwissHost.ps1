@@ -32,7 +32,7 @@ function Update-SwissHost {
   # Get the repository's configuration file
   if ($null -ne $Bootstrap)
   {
-    Write-Host "Bootstrapping '${env:ComputerName}'"
+    Write-Host "Bootstrapping '${env:ComputerName}' from ${Bootstrap.Url}"
 
     # Save the access token
     Add-Member -Name 'Token' -Value $Bootstrap.Token -Force -InputObject $Config -MemberType NoteProperty
