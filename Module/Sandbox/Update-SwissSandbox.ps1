@@ -17,21 +17,19 @@ function Update-SwissSandbox {
   {
     Write-Host "Bootstrapping sandbox '${env:ComputerName}'"
 
-    $HostConfig = [PSCustomObject]@{}
+    $HostConfig = [PSCustomObject]@{Token=$Bootstrap.Token}
     try {
-      # Only add the token if it is valid
-      Invoke-WebRequest -Method Get -Uri "https://api.github.com/repositories" -Headers @{Authorization=@('token ',$Bootstrap.Token) -join ''}
-      Add-Member -Name 'Token' -Value $Bootstrap.Token -Force -InputObject $HostConfig -MemberType NoteProperty
+      Invoke-WebRequest -Method Get -Uri "https://api.github.com/repositories" -Headers @{Authorization=@('token ',$HostConfig.Token) -join ''}
     }
     catch {
-      Write-Host -ForegroundColor Yellow ">>>> Authorization token invalid or not provided; can only access PUBLIC repositories <<<<"
+      Add-Member -Name 'Token' -Value $Null -Force -InputObject $HostConfig -MemberType NoteProperty
+      Write-Host -ForegroundColor Yellow ">>>> GitHub authorization token invalid or not provided <<<<"
     }
 
     $HostHeaders = @{'Cache-Control'='no-store'}
-    if ([bool]($HostConfig.PSObject.Properties.name -match "Token"))
+    if ([bool]$HostConfig.Token)
     {
-      # Only add the token if it is valid
-      $HostHeaders.Add('Authorization', @('token ',$GuestConfig.Token) -join '')
+      $HostHeaders.Add('Authorization', @('token ',$HostConfig.Token) -join '')
     }
 
     # Parse the host's repository configuration from HostUrl
@@ -95,9 +93,13 @@ function Update-SwissSandbox {
     {
       Write-Host "Repository is from a different user. Enter another access token if necessary, or leave it blank."
       $OverrideToken = Read-Host -Prompt "Repository GitHub Token"
-      if ($OverrideToken.StartsWith("ghp_"))
+      if ($OverrideToken.Length -gt 0)
       {
-        $ProjectConfig.Token = $OverrideToken
+        try {
+          Invoke-WebRequest -Method Get -Uri "https://api.github.com/repositories" -Headers @{Authorization=@('token ',$OverrideToken) -join ''}
+          ProjectConfig.Token = $OverrideToken
+        }
+        catch { }
       }
     }
 
@@ -123,7 +125,11 @@ function Update-SwissSandbox {
 
 
   # Derived variables
-  $SandboxHeaders = @{Authorization=('token ' + $ProjectConfig.Token); 'Cache-Control'='no-store'}
+  $SandboxHeaders = @{'Cache-Control'='no-store'}
+  if ([bool]$ProjectConfig.Token)
+  {
+    $SandboxHeaders.Add('Authorization', @('token ', $ProjectConfig.Token) -join '')
+  }
   $ModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
   $PackagesConfigUrl = "$($ProjectConfig.RawUrl)/.swiss/packages.config"
   $PackagesConfigPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "packages.config"
