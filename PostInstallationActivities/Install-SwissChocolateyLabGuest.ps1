@@ -15,7 +15,7 @@ Import-Module SwissChocolateyLab -Force
 
 # Create a network shared folder that the host can access at \\THISMACHINE\Shared
 New-Item "C:\Shared" -ItemType Directory
-New-SMBShare -Name "Shared" -Path "C:\Shared"
+New-SMBShare -Name "Shared" -Path "C:\Shared" -FullAccess 
 
 
 # Set up Chocolatey
