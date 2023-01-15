@@ -68,13 +68,21 @@ function Install-SwissVM {
   }
   Add-Member -Name 'RawUrl' -Value "https://raw.githubusercontent.com/$($GuestConfig.UserName)/$($GuestConfig.Repository)/$($GuestConfig.Branch)" -Force -InputObject $GuestConfig -MemberType NoteProperty
   Add-Member -Name 'ApiContentsUrl' -Value "https://api.github.com/repos/$($GuestConfig.UserName)/$($GuestConfig.Repository)/contents" -Force -InputObject $GuestConfig -MemberType NoteProperty
+
+  # Overwrite the field GuestConfig.Token with $Null if the token is invalid
   try {
-    Invoke-WebRequest -Method Get -Uri "https://api.github.com/repositories" -Headers @{Authorization=@('token ',$Token) -join ''}
+    $previousProgressPreference = $global:ProgressPreference
+    $global:ProgressPreference = 'SilentlyContinue'
+    Invoke-WebRequest -Method Get -Uri "https://api.github.com/repositories" -Headers @{Authorization=@('token ',$Token) -join ''} | Out-Null
   }
   catch {
     Add-Member -Name 'Token' -Value $Null -Force -InputObject $GuestConfig -MemberType NoteProperty
-    Write-Host -ForegroundColor Yellow ">>>> Authorization token invalid or not provided; can only access PUBLIC repositories <<<<"
+    Write-Host -ForegroundColor Yellow ">>>> GitHub authorization token invalid <<<<"
   }
+  finally {
+    $global:ProgressPreference = $previousProgressPreference
+  }
+
   if ($PSBoundParameters.ContainsKey('UseCommonConfig'))
   {
     # Use a generic configuration from the main repository
@@ -93,6 +101,8 @@ function Install-SwissVM {
   }
   try
   {
+    $previousProgressPreference = $global:ProgressPreference
+    $global:ProgressPreference = 'SilentlyContinue'
     $GuestConfigApiResponse = (Invoke-WebRequest -Method Get -Uri $GuestSpecificConfigUrl -Headers $GuestHeaders).Content | ConvertFrom-Json
     $RemoteConfig = [System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String($GuestConfigApiResponse.content)) | ConvertFrom-Json
     Write-Host "Read guest config from $GuestSpecificConfigUrl"
@@ -108,6 +118,7 @@ function Install-SwissVM {
   }
   finally
   {
+    $global:ProgressPreference = $previousProgressPreference
     if (Test-Path 'variable:RemoteConfig')
     {
       # Move properties into GuestConfig

@@ -78,12 +78,16 @@ function Update-SwissHost {
   # Web request headers get an 'Authorization' token added only if the one we have is valid
   $Headers = @{'Cache-Control'='no-store'}
   try {
-    # Only add the token if it is valid
-    Invoke-WebRequest -Method Get -Uri "https://api.github.com/repositories" -Headers @{Authorization=@('token ',$Config.Token) -join ''}
+    $previousProgressPreference = $global:ProgressPreference
+    $global:ProgressPreference = 'SilentlyContinue'
+    Invoke-WebRequest -Method Get -Uri "https://api.github.com/repositories" -Headers @{Authorization=@('token ',$Config.Token) -join ''} | Out-Null
     $Headers.Add('Authorization', @('token ',$Config.Token) -join '')
   }
   catch {
-    Write-Host -ForegroundColor Yellow ">>>> Authorization token invalid; will be limited to read-only access of public repositories <<<<"
+    Write-Host -ForegroundColor Yellow ">>>> GitHub authorization token invalid  <<<<"
+  }
+  finally {
+    $global:ProgressPreference = $previousProgressPreference
   }
 
   # Require Administrator privileges

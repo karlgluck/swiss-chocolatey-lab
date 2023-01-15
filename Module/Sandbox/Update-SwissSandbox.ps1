@@ -19,12 +19,18 @@ function Update-SwissSandbox {
 
     $HostConfig = [PSCustomObject]@{Token=$Bootstrap.Token}
     try {
-      Invoke-WebRequest -Method Get -Uri "https://api.github.com/repositories" -Headers @{Authorization=@('token ',$HostConfig.Token) -join ''}
+      $previousProgressPreference = $global:ProgressPreference
+      $global:ProgressPreference = 'SilentlyContinue'
+      Invoke-WebRequest -Method Get -Uri "https://api.github.com/repositories" -Headers @{Authorization=@('token ',$HostConfig.Token) -join ''} | Out-Null
     }
     catch {
       Add-Member -Name 'Token' -Value $Null -Force -InputObject $HostConfig -MemberType NoteProperty
-      Write-Host -ForegroundColor Yellow ">>>> GitHub authorization token invalid or not provided <<<<"
+      Write-Host -ForegroundColor Yellow ">>>> GitHub authorization token invalid <<<<"
     }
+    finally {
+      $global:ProgressPreference = $previousProgressPreference
+    }
+
 
     $HostHeaders = @{'Cache-Control'='no-store'}
     if ([bool]$HostConfig.Token)

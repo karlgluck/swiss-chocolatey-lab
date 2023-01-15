@@ -65,16 +65,22 @@ function Update-SwissGuest {
 
 
 
-  # Derived variables
+  # Headers for making requests of GitHub
   $GuestHeaders = @{'Cache-Control'='no-store'}
   try {
-    # Only add the token if it is valid
-    Invoke-WebRequest -Method Get -Uri "https://api.github.com/repositories" -Headers @{Authorization=@('token ',$GuestConfig.Token) -join ''}
-    $GuestHeaders.Add('Authorization', @('token ',$GuestConfig.Token) -join '')
+    $previousProgressPreference = $global:ProgressPreference
+    $global:ProgressPreference = 'SilentlyContinue'
+    Invoke-WebRequest -Method Get -Uri "https://api.github.com/repositories" -Headers @{Authorization=@('token ',$GuestConfig.Token) -join ''} | Out-Null
+    $GuestHeaders.Add('Authorization', @('token ', $GuestConfig.Token) -join '')
   }
   catch {
-    Write-Host -ForegroundColor Yellow ">>>> Authorization token invalid or not provided; can only access PUBLIC repositories <<<<"
+    Write-Host -ForegroundColor Yellow ">>>> GitHub authorization token invalid <<<<"
   }
+  finally {
+    $global:ProgressPreference = $previousProgressPreference
+  }
+
+  # Derived variables
   $ModulesFolder = Join-Path ($env:PSModulePath -split ';')[0] "SwissChocolateyLab"
   $PackagesConfigUrl = "$($GuestConfig.ApiContentsUrl)/.swiss/packages.config"
   $PackagesConfigPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "packages.config"
